@@ -1,0 +1,17 @@
+# output di compilazione (l'exe va nelle Release, non nel repository)
+dist/
+obj/
+*.exe
+*.pdb
+
+# dati registrati (non dovrebbero mai stare qui, ma per sicurezza)
+*.csv
+*.log
+crash_*.txt
+
+# file di sistema/editor
+Thumbs.db
+desktop.ini
+.vs/
+.vscode/
+.claude/
