@@ -73,11 +73,13 @@ L'eseguibile viene creato in `dist\BlackBox.exe`.
 
 ## Uso
 
+La guida completa, passo passo, è in **[GUIDA.md](GUIDA.md)** e si apre anche dal programma (pulsante **Guida** o tasto destro sull'icona → **Guida**).
+
 | Azione | Effetto |
 |---|---|
 | Chiudi / riduci a icona la finestra | va nell'area di notifica e **continua a registrare** |
 | Clic sinistro sull'icona | riapre la finestra |
-| Clic destro sull'icona | menu: apri, ultimo report, cartella log, esci |
+| Clic destro sull'icona | menu: apri, ultimo report, cartella log, guida, esci |
 | **Esci** dal menu | ferma davvero la registrazione |
 
 Opzioni da riga di comando:

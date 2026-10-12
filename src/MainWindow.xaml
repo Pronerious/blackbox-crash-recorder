@@ -61,6 +61,7 @@
         <Button x:Name="BtnReport" Content="Ultimo report"/>
         <Button x:Name="BtnLogs" Content="Apri cartella log"/>
         <Button x:Name="BtnAuto" Content="Avvio automatico: OFF"/>
+        <Button x:Name="BtnGuide" Content="Guida"/>
         <Button x:Name="BtnTray" Content="Nascondi nella barra"/>
       </StackPanel>
     </Grid>
@@ -140,7 +141,7 @@
         </Border>
         <Border Style="{StaticResource Card}" Grid.Row="1">
           <DockPanel>
-            <TextBlock DockPanel.Dock="Top" Style="{StaticResource H}" Text="EVENTI (sospensione, errori driver, WHEA, crash app)"/>
+            <TextBlock DockPanel.Dock="Top" Style="{StaticResource H}" Text="EVENTI (sospensione, errori driver, WHEA, crash app, sblocchi)"/>
             <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel x:Name="EvList"/></ScrollViewer>
           </DockPanel>
         </Border>

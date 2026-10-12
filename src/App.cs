@@ -1,4 +1,4 @@
-// BlackBox, la scatola nera del PC - applicazione con icona nella barra di sistema.
+﻿// BlackBox, la scatola nera del PC - applicazione con icona nella barra di sistema.
 // PRIVACY: nessuna connessione di rete, nessuna telemetria. I dati restano in Documenti\BlackBox.
 using System;
 using System.Collections.Generic;
@@ -23,7 +23,7 @@ using SD = System.Drawing;
 
 [assembly: AssemblyTitle("BlackBox")]
 [assembly: AssemblyProduct("BlackBox")]
-[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.1.1.0")]
 
 namespace BlackBox
 {
@@ -141,6 +141,7 @@ namespace BlackBox
             menu.Items.Add("Apri monitor", null, (s, e) => ShowWindow());
             menu.Items.Add("Ultimo report", null, (s, e) => OpenLastReport());
             menu.Items.Add("Apri cartella log", null, (s, e) => OpenLogs());
+            menu.Items.Add("Guida", null, (s, e) => OpenGuide());
             menu.Items.Add(new WF.ToolStripSeparator());
             menu.Items.Add("Esci (interrompe la registrazione)", null, (s, e) => Exit());
             tray.ContextMenuStrip = menu;
@@ -361,6 +362,20 @@ namespace BlackBox
             else MessageBox.Show("Nessun report ancora: verrà creato al primo spegnimento anomalo con BlackBox attivo.", "BlackBox");
         }
 
+        // la guida e' dentro l'exe: la scrive in Documenti\BlackBox e la apre con il Blocco note
+        void OpenGuide()
+        {
+            try
+            {
+                string p = Path.Combine(logDir, "GUIDA.txt");
+                using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("GUIDA.md"))
+                using (var sr = new StreamReader(s))
+                    File.WriteAllText(p, sr.ReadToEnd(), new System.Text.UTF8Encoding(true));
+                OpenFile(p);
+            }
+            catch (Exception ex) { MessageBox.Show("Impossibile aprire la guida:\n\n" + ex.Message, "BlackBox"); }
+        }
+
         static string ExePath { get { return Assembly.GetExecutingAssembly().Location; } }
 
         bool AutoStartOn()
@@ -375,6 +390,7 @@ namespace BlackBox
         {
             F<Button>("BtnReport").Click += (s, e) => OpenLastReport();
             F<Button>("BtnLogs").Click += (s, e) => OpenLogs();
+            F<Button>("BtnGuide").Click += (s, e) => OpenGuide();
             F<Button>("BtnTray").Click += (s, e) => HideToTray();
             F<Button>("BtnHideBanner").Click += (s, e) => F<Border>("Banner").Visibility = Visibility.Collapsed;
             F<Button>("BtnOpenCrash").Click += (s, e) => { if (crashReport != null) OpenFile(crashReport); };
