@@ -23,7 +23,7 @@ using SD = System.Drawing;
 
 [assembly: AssemblyTitle("BlackBox")]
 [assembly: AssemblyProduct("BlackBox")]
-[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.1.0.0")]
 
 namespace BlackBox
 {
@@ -322,7 +322,7 @@ namespace BlackBox
             list.Children.Insert(0, tb);
             while (list.Children.Count > 300) list.Children.RemoveAt(list.Children.Count - 1);
             if (ev.Text.Contains("Kernel-Power 41")) UpdateHistory();
-            if (ev.Level == "ERR" && snapshot == null)
+            if ((ev.Level == "ERR" || ev.Text.StartsWith("Sbloccato")) && snapshot == null)
                 tray.ShowBalloonTip(8000, "BlackBox", ev.Text, WF.ToolTipIcon.Warning);
         }
 

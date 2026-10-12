@@ -4,7 +4,7 @@ Il PC si spegne o si riavvia da solo, senza schermata blu e senza lasciare tracc
 **BlackBox** registra di continuo lo stato del sistema, come la scatola nera di un aereo.
 Dopo uno spegnimento anomalo crea un **report con gli ultimi minuti prima del crash** e una **diagnosi automatica** della causa più probabile.
 
-> 🇬🇧 *BlackBox is a lightweight Windows "flight recorder": it logs CPU/GPU/RAM state every second straight to disk and, after an unexpected shutdown (Kernel-Power 41), produces a report of the last minutes before the crash with an automatic diagnosis (PSU / GPU power spike, CPU undervolt, RAM profile, overheating, sleep transitions, BSOD). 100% local, no network, no telemetry. UI in Italian.*
+> 🇬🇧 *BlackBox is a lightweight Windows "flight recorder": it logs CPU/GPU/RAM state every second straight to disk and, after an unexpected shutdown (Kernel-Power 41), produces a report of the last minutes before the crash with an automatic diagnosis (PSU / GPU power spike, CPU undervolt, RAM profile, overheating, sleep transitions, BSOD). It also restarts known Windows shell components (TextInputHost, SearchHost, …) when they get stuck burning a CPU core for over a minute. 100% local, no network, no telemetry. UI in Italian.*
 
 ---
 
@@ -23,11 +23,26 @@ Dopo uno spegnimento anomalo crea un **report con gli ultimi minuti prima del cr
   - Le soglie di potenza sono **relative alla tua scheda** (massimo mai registrato su quel PC), quindi valgono per qualsiasi GPU.
 - **Test A/B**: scrivi la configurazione attuale (es. `CO -20, EXPO ON, GPU UV -50mV`). BlackBox associa ogni spegnimento alla configurazione attiva e conta i giorni stabili, così capisci quale modifica risolve davvero.
 - **Storico** di tutti gli spegnimenti anomali degli ultimi 120 giorni.
+- **Sblocco automatico dei processi di Windows impazziti**: alcuni componenti di Windows a volte restano bloccati in un ciclo, usano un core intero del processore e scaldano il PC senza motivo. Se uno di questi resta sopra il 50% di un core per più di 60 secondi di fila, BlackBox lo chiude, lo scrive negli eventi e mostra una notifica. Windows lo riapre da solo, pulito, appena serve. Controllati:
+
+  | Processo | Cos'è |
+  |---|---|
+  | `TextInputHost` | tastiera virtuale, pannello emoji (Win + .), cronologia appunti (Win + V) |
+  | `SearchHost` | pannello Cerca |
+  | `StartMenuExperienceHost` | menu Start |
+  | `ShellExperienceHost` | centro notifiche, calendario, impostazioni rapide |
+  | `CrossDeviceResume` | "riprendi dal telefono" (bug noto di Windows 11) |
+  | `Widgets`, `WidgetService` | pannello Widget |
+  | `PhoneExperienceHost` | Collegamento al telefono |
+  | `LockApp` | schermata di blocco |
+
+  Nessun altro processo viene mai toccato: i tuoi programmi e i giochi non vengono chiusi.
 - **Area di notifica**: chiudi la finestra e continua a registrare in background; notifiche quando rileva un problema; avvio automatico con Windows (opzionale).
 
 ## Privacy
 
 - **Nessuna connessione di rete, nessuna telemetria, nessun aggiornamento automatico.**
+- L'unica azione sul sistema è lo sblocco automatico descritto sopra, limitato all'elenco fisso di componenti di Windows.
 - Legge solo i contatori di prestazioni di Windows, il driver della scheda video già installato e il Registro eventi.
 - Tutti i dati restano in `Documenti\BlackBox` sul tuo PC. I CSV più vecchi di 14 giorni vengono cancellati automaticamente.
 - Il codice sorgente è tutto qui: puoi leggerlo e compilarlo da solo.

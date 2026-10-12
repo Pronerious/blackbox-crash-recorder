@@ -497,14 +497,51 @@ namespace BlackBox
                     {
                         double pct = (t - old).TotalMilliseconds / dt / Environment.ProcessorCount * 100.0;
                         if (pct > best) { best = pct; bestName = p.ProcessName; }
+                        if (Stuckable.Contains(p.ProcessName)) CheckStuck(p, pct * Environment.ProcessorCount);
                     }
                 }
                 catch { }
                 finally { p.Dispose(); }
             }
             prevCpu.Clear(); foreach (var kv in cur) prevCpu[kv.Key] = kv.Value;
+            foreach (var pid in stuckSince.Keys.Where(k => !cur.ContainsKey(k)).ToList()) stuckSince.Remove(pid);
+            stuckFailed.RemoveWhere(k => !cur.ContainsKey(k));
             prevCpuAt = now;
             return new KeyValuePair<string, double>(bestName, bestName == "" ? double.NaN : Math.Min(100, best));
+        }
+
+        // ------------------------------------------------ Sblocco automatico
+        // Processi di Windows che a volte restano bloccati in un ciclo e scaldano il PC senza motivo.
+        // Si possono chiudere senza danni: Windows li riapre da solo quando servono.
+        //   TextInputHost            = tastiera virtuale, pannello emoji (Win+.), cronologia appunti (Win+V)
+        //   SearchHost               = pannello Cerca
+        //   StartMenuExperienceHost  = menu Start
+        //   ShellExperienceHost      = centro notifiche, calendario, impostazioni rapide
+        //   CrossDeviceResume        = "riprendi dal telefono" (bug noto di Windows 11)
+        //   Widgets / WidgetService  = pannello Widget
+        //   PhoneExperienceHost      = Collegamento al telefono
+        //   LockApp                  = schermata di blocco
+        static readonly HashSet<string> Stuckable = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+            "TextInputHost", "SearchHost", "StartMenuExperienceHost", "ShellExperienceHost",
+            "CrossDeviceResume", "Widgets", "WidgetService", "PhoneExperienceHost", "LockApp" };
+        const double StuckCorePct = 50;     // % di UN core
+        const double StuckSeconds = 60;     // per quanto tempo di fila
+        readonly Dictionary<int, DateTime> stuckSince = new Dictionary<int, DateTime>();
+        readonly HashSet<int> stuckFailed = new HashSet<int>();   // non chiudibili: non riprovare
+
+        void CheckStuck(Process p, double corePct)
+        {
+            if (corePct < StuckCorePct || stuckFailed.Contains(p.Id)) { stuckSince.Remove(p.Id); return; }
+            DateTime from;
+            if (!stuckSince.TryGetValue(p.Id, out from)) { stuckSince[p.Id] = DateTime.Now; return; }
+            if ((DateTime.Now - from).TotalSeconds < StuckSeconds) return;
+            stuckSince.Remove(p.Id);
+            try
+            {
+                p.Kill();
+                AddEvent("WARN", "Sbloccato " + p.ProcessName + ": era bloccato al " + Math.Round(corePct) + "% di un core da oltre " + StuckSeconds + " s. Chiuso, Windows lo riapre da solo.");
+            }
+            catch (Exception ex) { stuckFailed.Add(p.Id); AddEvent("WARN", p.ProcessName + " bloccato al " + Math.Round(corePct) + "% ma non chiudibile: " + ex.Message); }
         }
 
         // ------------------------------------------------ CSV (scrittura diretta su disco)
