@@ -332,6 +332,7 @@ namespace BlackBox
             InitPdh();
             EverMaxPower = Analyzer.ReadMaxPower(LogDir);
             GpuSensors.Init();
+            CpuTemp.Start();
             AddEvent("INFO", "BlackBox avviato" + (GpuSensors.Ok ? " (sensori GPU " + GpuSensors.Vendor + " attivi)" : " (sensori GPU non disponibili: supportate schede AMD e NVIDIA)"));
             pendingNote = "avvio monitor";
 
@@ -480,6 +481,7 @@ namespace BlackBox
             }
 
             s.TopCpuProc = topCpu.Key; s.TopCpuPct = topCpu.Value;
+            s.CpuTctl = CpuTemp.Value;
             try { s.Foreground = fgPid != 0 ? NameOf((int)fgPid) : ""; } catch { }
 
             lock (evLock) { s.Note = pendingNote; pendingNote = ""; }

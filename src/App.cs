@@ -479,7 +479,9 @@ namespace BlackBox
                 if (!win.IsVisible) return;   // finestra nascosta: registra soltanto
 
                 tiles["cpu"].Value.Text = Fmt(s.CpuUtil);
-                tiles["cpu"].Sub.Text = "core più carico " + Fmt(s.CpuCoreMax) + "%";
+                tiles["cpu"].Sub.Text = "core più carico " + Fmt(s.CpuCoreMax) + "% · " +
+                    (double.IsNaN(s.CpuTctl) ? "temperatura n/d — apri HWiNFO con memoria condivisa" : Fmt(s.CpuTctl) + " °C (" + CpuTemp.Source + ")");
+                tiles["cpu"].Value.Foreground = s.CpuTctl >= 90 ? Red : s.CpuTctl >= 80 ? Orange : Text;
                 tiles["mhz"].Value.Text = Fmt(s.CpuMhz);
                 tiles["mhz"].Sub.Text = "prestazioni " + Fmt(s.CpuPerf) + "% del clock base";
                 tiles["gpu"].Value.Text = Fmt(s.Gpu3d);

@@ -307,7 +307,9 @@ namespace BlackBox
             Row(sb, "Temperatura edge massima", N0(edge) + " °C");
             Row(sb, "Hotspot massimo", N0(hot) + " °C");
             Row(sb, "Hotspot − edge medio / max", N0(dAvg) + " / " + N0(dMax) + " °C");
-            Row(sb, "VRAM massima", double.IsNaN(vram) ? "n/d" : vram.ToString("0.0", CultureInfo.InvariantCulture) + " GB");
+            double cpuT = Max(all, x => x.CpuTctl), cpuTAvg = Avg(play, x => x.CpuTctl);
+            Row(sb, "CPU temperatura media / max", double.IsNaN(cpuT) ? "n/d (apri HWiNFO con la memoria condivisa)" : N0(cpuTAvg) + " / " + N0(cpuT) + " °C");
+            Row(sb, "VRAM massima",double.IsNaN(vram) ? "n/d" : vram.ToString("0.0", CultureInfo.InvariantCulture) + " GB");
             sb.AppendLine();
             sb.AppendLine("--- FPS ---");
             Row(sb, "FPS medio / 1% low", double.IsNaN(fps) ? "n/d (FPS non ancora attivi)" : N0(fps) + " / " + N0(fpsLow));

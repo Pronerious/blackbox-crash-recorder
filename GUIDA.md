@@ -2,7 +2,8 @@
 
 BlackBox è la "scatola nera" del PC: registra di continuo cosa succede e, se il PC
 si spegne o si riavvia da solo, ti dice cosa stava facendo un attimo prima.
-In più sblocca da solo alcuni pezzi di Windows quando si bloccano e scaldano il PC.
+In più sblocca da solo alcuni pezzi di Windows quando si bloccano e scaldano il PC,
+e quando giochi scrive un report della partita e controlla che la scheda video sia stabile.
 
 La versione breve è nel [README](README.md). Questa guida si apre anche dal
 programma: pulsante **Guida** in alto, oppure tasto destro sull'icona → **Guida**.
@@ -20,6 +21,8 @@ programma: pulsante **Guida** in alto, oppure tasto destro sull'icona → **Guid
 7. [I file che crea](#7-i-file-che-crea)
 8. [Problemi e soluzioni](#8-problemi-e-soluzioni)
 9. [Privacy](#9-privacy)
+10. [Sessioni di gioco](#10-sessioni-di-gioco)
+11. [Temperatura della CPU (con HWiNFO)](#11-temperatura-della-cpu-con-hwinfo)
 
 ---
 
@@ -40,10 +43,13 @@ Non servono permessi di amministratore e non si installa niente.
 - **Otto riquadri in alto**: carico e frequenza della CPU, carico, potenza,
   temperatura e frequenza della scheda video, RAM e memoria video. La linea mostra
   gli ultimi due minuti.
-- **Attività in questo momento**: l'app in primo piano e i programmi che stanno
-  usando più processore e più scheda video.
+  Nel riquadro della CPU c'è anche la temperatura, se HWiNFO è aperto (vedi punto 11).
+- **Attività in questo momento**: l'app in primo piano, i programmi che stanno
+  usando più processore e più scheda video, e la **sessione di gioco** in corso.
 - **Spegnimenti anomali**: tutti gli spegnimenti improvvisi degli ultimi 120 giorni,
   con la diagnosi. Clicca la diagnosi per aprire il report completo.
+  Sotto, i **crash del driver video (TDR) e dei giochi**, contati per gioco e per
+  configurazione del test A/B.
 - **Eventi**: sospensioni, errori del driver video, errori hardware, programmi che
   si sono chiusi da soli e gli sblocchi automatici. In rosso gli errori gravi,
   in arancione gli avvisi.
@@ -122,6 +128,7 @@ Windows: installa gli aggiornamenti di Windows Update.
 | Passare sopra col mouse | potenza e temperatura della scheda video |
 | Tasto destro → Apri monitor | apre la finestra |
 | Tasto destro → Ultimo report | apre l'ultimo report di spegnimento |
+| Tasto destro → Ultima sessione di gioco | apre il report dell'ultima partita |
 | Tasto destro → Apri cartella log | apre la cartella dei dati |
 | Tasto destro → Guida | apre questa guida |
 | Tasto destro → Esci | ferma davvero BlackBox |
@@ -138,6 +145,9 @@ Tutto sta in `Documenti\BlackBox`:
 | `eventi.log` | gli eventi della lista, compresi gli sblocchi |
 | `crash_AAAAMMGG_HHMMSS.txt` | il report di ogni spegnimento anomalo |
 | `configurazioni.log` | lo storico delle configurazioni del test A/B |
+| `sessione_<gioco>_<data>.txt` | il report di ogni partita (punto 10) |
+| `sessioni.csv` | una riga per partita: serve ai confronti; si apre con Excel |
+| `sessione_in_corso.txt`, `controllo_tuning.txt` | file di lavoro: si cancellano da soli |
 | `GUIDA.txt` | questa guida, creata quando la apri dal programma |
 
 ## 8. Problemi e soluzioni
@@ -151,8 +161,12 @@ spostato: apri il programma e rimetti *Avvio automatico* su OFF e poi su ON.
 **Non vedo potenza e temperatura della scheda video.** Funzionano solo con schede
 AMD e NVIDIA con il driver installato.
 
-**La temperatura della CPU non c'è.** Per leggerla servirebbero permessi di
-amministratore; BlackBox volutamente non li chiede.
+**La temperatura della CPU dice "n/d".** BlackBox la prende da HWiNFO: apri HWiNFO
+e controlla che la memoria condivisa sia accesa (punto 11).
+
+**Non parte la sessione di gioco.** Parte solo se il gioco è in primo piano e usa la
+scheda video oltre il 60% per 20 secondi. Giochi molto leggeri (o con FPS bloccati
+bassi) possono restare sotto: è normale.
 
 **Un gioco si chiude all'avvio.** Alcuni giochi online con anti-cheat non vogliono
 programmi che leggono i sensori. Chiudi BlackBox dal tasto destro → *Esci* prima
@@ -165,6 +179,53 @@ chiude: va chiuso a mano da Gestione attività (Ctrl + Shift + Esc).
 ## 9. Privacy
 
 - Nessuna connessione a internet, nessun invio di dati, nessun aggiornamento automatico.
-- Legge solo i contatori di Windows, il driver della scheda video e il Registro eventi.
+- Legge solo i contatori di Windows, il driver della scheda video, il Registro eventi
+  e, se aperti, i valori pubblicati da HWiNFO o LibreHardwareMonitor.
 - L'unica azione sul sistema è lo sblocco del punto 5, limitato all'elenco fisso.
 - Tutti i dati restano in `Documenti\BlackBox`.
+
+## 10. Sessioni di gioco
+
+Non devi fare niente: BlackBox capisce da solo quando giochi. La sessione **parte**
+quando il programma in primo piano usa la scheda video oltre il 60% per più di
+20 secondi, e **finisce** quando chiudi il gioco o lo lasci in secondo piano per più
+di un minuto. Nella finestra la vedi alla riga *Sessione di gioco*.
+
+A fine partita trovi il report (tasto destro sull'icona → **Ultima sessione di
+gioco**). Dentro c'è:
+
+- durata, potenza media e di picco, clock e tensione medi della scheda video;
+- temperature massime: *edge* (la superficie del chip) e *hotspot* (il punto più caldo);
+- la **differenza hotspot − edge**: se in media supera 25 °C il dissipatore potrebbe
+  non toccare bene il chip (pasta termica o montaggio);
+- VRAM massima, temperatura della CPU, configurazione A/B attiva;
+- **throttling**: le volte in cui la scheda ha rallentato da sola pur essendo al
+  massimo (oltre il 95% di carico ma con il clock sotto l'85% del solito per più di
+  5 secondi), con la causa probabile: troppo calda o al limite di potenza;
+- crash del driver video (TDR) e crash del gioco durante la partita.
+
+**Reset del tuning di Adrenalin.** Dopo un crash del driver video o uno spegnimento
+anomalo, Adrenalin spesso rimette da solo i valori di fabbrica e il tuo undervolt
+o overclock sparisce senza avvisare. Alla partita successiva BlackBox confronta
+tensione e clock con le partite precedenti; se sono cambiati ti avvisa con
+*"Adrenalin ha ripristinato i valori di fabbrica dopo un crash: lo UV/OC non è più
+attivo"*. Rimettilo in Adrenalin → Prestazioni → Ottimizzazione, magari un po' più
+prudente.
+
+Il confronto funziona solo se c'è almeno una partita registrata prima del crash.
+
+## 11. Temperatura della CPU (con HWiNFO)
+
+Per leggere la temperatura vera della CPU (Tctl/Tdie) servirebbe un driver speciale,
+che BlackBox volutamente non installa. La prende quindi da **HWiNFO**, se è aperto:
+
+1. Apri HWiNFO64 e scegli **Sensors only** (solo sensori).
+2. Nella finestra dei sensori clicca l'ingranaggio **Settings** (in basso).
+3. Metti la spunta su **Shared Memory Support** e premi **OK**.
+4. Dopo qualche secondo nel riquadro della CPU di BlackBox compare la temperatura.
+
+Nella versione gratuita di HWiNFO la memoria condivisa si spegne da sola dopo
+12 ore: se la temperatura torna "n/d", rimetti la spunta.
+
+In alternativa va bene anche **LibreHardwareMonitor** aperto.
+Senza nessuno dei due, la temperatura resta "n/d" e tutto il resto funziona.
