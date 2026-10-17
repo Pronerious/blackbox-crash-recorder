@@ -337,6 +337,15 @@ disegnata dal processore e non dalla scheda video. Il gioco resta in *Independen
 Flip*, la modalità più veloce, senza latenza in più. Misurato: circa **0,15%** della
 CPU con l'overlay acceso.
 
+**Mentre giochi BlackBox si fa da parte:**
+
+- passa a **priorità bassa**, così il gioco ha sempre la precedenza;
+- controlla i programmi aperti ogni 5 secondi (invece di 2) e il Registro eventi ogni
+  30 (invece di 10);
+- restituisce a Windows la memoria che non usa, anche ogni volta che chiudi la sua
+  finestra;
+- **non mostra notifiche**: le tiene da parte e te le mostra a fine partita.
+
 Il tasto rapido si può cambiare in `impostazioni.ini`, riga `overlay_tasto=`
 (per esempio `Ctrl+Alt+F10`), con BlackBox chiuso.
 

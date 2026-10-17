@@ -155,6 +155,8 @@ namespace BlackBox
 
             // ---- chiudere o ridurre a icona = nascondi nella barra, la registrazione continua
             win.StateChanged += (s, e) => { if (win.WindowState == WindowState.Minimized) HideToTray(); };
+            // finestra chiusa = BlackBox restituisce a Windows la memoria della grafica che non serve
+            win.IsVisibleChanged += (s, e) => { col.WindowHidden = !win.IsVisible; if (!win.IsVisible) Collector.TrimMemory(); };
             win.Closing += (s, e) => { if (!exiting) { e.Cancel = true; HideToTray(); } };
             app.SessionEnding += (s, e) => { exiting = true; col.Stop("Windows in arresto: BlackBox chiuso"); tray.Visible = false; };
 
@@ -419,7 +421,11 @@ namespace BlackBox
             if (ev.Text.Contains("Kernel-Power 41")) UpdateHistory();
             else if (ev.Text.Contains("Display 4101") || ev.Text.StartsWith("Sessione di gioco finita")) UpdateDriverCrashes();
             if ((ev.Level == "ERR" || ev.Text.StartsWith("Sbloccato") || ev.Text.StartsWith("Adrenalin ha ripristinato")) && snapshot == null)
-                tray.ShowBalloonTip(8000, "BlackBox", ev.Text, WF.ToolTipIcon.Warning);
+            {
+                // in partita niente notifiche (possono dare uno scatto o rubare lo schermo): le mostro a fine partita
+                if (col.Games.InSession) heldNotices.Add(ev.Text);
+                else tray.ShowBalloonTip(8000, "BlackBox", ev.Text, WF.ToolTipIcon.Warning);
+            }
         }
 
         void LoadPastEvents()
@@ -548,6 +554,14 @@ namespace BlackBox
                     welcomeShown = true;
                     if (Hardware.FirstRun) ShowWelcome();
                 }
+                if (heldNotices.Count > 0 && !col.Games.InSession)
+                {
+                    string first = heldNotices[0];
+                    tray.ShowBalloonTip(10000, heldNotices.Count == 1 ? "BlackBox — durante la partita" : "BlackBox — " + heldNotices.Count + " avvisi durante la partita",
+                                        first + (heldNotices.Count > 1 ? "  (gli altri sono negli Eventi)" : ""), WF.ToolTipIcon.Warning);
+                    heldNotices.Clear();
+                }
+
                 EventLine ev;
                 while (col.NewEvents.TryDequeue(out ev)) AddEventRow(ev);
 
@@ -689,6 +703,7 @@ namespace BlackBox
         }
 
         bool welcomeShown;
+        readonly List<string> heldNotices = new List<string>();
 
         // primo avvio: cosa ha riconosciuto BlackBox e cosa conviene fare
         void ShowWelcome()

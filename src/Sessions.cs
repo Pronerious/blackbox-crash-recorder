@@ -167,6 +167,9 @@ namespace BlackBox
             current = c;
             WriteState(c, s.Time);
             try { Fps.Start(c.Pid); } catch { }
+            // durante la partita BlackBox cede sempre il passo al gioco e libera la memoria che non usa
+            try { using (var me = Process.GetCurrentProcess()) me.PriorityClass = ProcessPriorityClass.BelowNormal; } catch { }
+            Collector.TrimMemory();
             col.AddEvent("INFO", "Sessione di gioco iniziata: " + c.Game);
         }
 
@@ -316,6 +319,7 @@ namespace BlackBox
             double eff = !double.IsNaN(fpsReal) && pAvg > 20 ? fpsReal / pAvg : double.NaN;   // FPS reali per watt
             bool fg = !double.IsNaN(fgShare) && fgShare > 0.2;
             try { Fps.Stop(); } catch { }
+            try { using (var me = Process.GetCurrentProcess()) me.PriorityClass = ProcessPriorityClass.Normal; } catch { }
             string opti = all.Select(x => x.OptiScaler).LastOrDefault(x => !string.IsNullOrEmpty(x)) ?? "";
             if (load.Count < 30) clkMax = mvLoad = double.NaN;   // troppo poco carico per un confronto affidabile
 

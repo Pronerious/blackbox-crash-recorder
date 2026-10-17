@@ -221,6 +221,7 @@ namespace BlackBox
     {
         [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+        [DllImport("psapi.dll")] public static extern bool EmptyWorkingSet(IntPtr h);
     }
 
     // ---------------------------------------------------------------- Collector
@@ -241,6 +242,19 @@ namespace BlackBox
         readonly object hlock = new object();
         volatile bool running;
         volatile string stopReason = "BlackBox chiuso";
+        public volatile bool WindowHidden = true;   // la finestra principale e' chiusa: si puo' liberare memoria
+        DateTime nextTrim = DateTime.Now.AddMinutes(2);
+
+        // restituisce a Windows la memoria non usata (utile prima di una partita e con la finestra chiusa)
+        public static void TrimMemory()
+        {
+            try
+            {
+                GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+                using (var me = Process.GetCurrentProcess()) Native.EmptyWorkingSet(me.Handle);
+            }
+            catch { }
+        }
         Thread thread;
 
         IntPtr q, cCpuUtil, cCpuCores, cCpuPerf, cCpuFreq, cRamCommit, cRamFree, cGpuEng, cVram, cThermal;
@@ -365,8 +379,11 @@ namespace BlackBox
                     if (!double.IsNaN(ck) && (double.IsNaN(clkMax) || ck > clkMax)) clkMax = ck;
                 }
 
-                if (now >= nextProc) { topCpu = TopCpuProcess(); nextProc = now.AddSeconds(2); }
-                if (now >= nextEvPoll) { PollEvents(ref evSince); nextEvPoll = now.AddSeconds(10); }
+                // in partita BlackBox si alleggerisce: elenco dei processi ogni 5 s e Registro eventi ogni 30 s
+                bool gaming = Games.InSession;
+                if (now >= nextProc) { topCpu = TopCpuProcess(); nextProc = now.AddSeconds(gaming ? 5 : 2); }
+                if (now >= nextEvPoll) { PollEvents(ref evSince); nextEvPoll = now.AddSeconds(gaming ? 30 : 10); }
+                if (now >= nextTrim) { if (WindowHidden) TrimMemory(); nextTrim = now.AddMinutes(10); }
 
                 if (now >= nextSec)
                 {
