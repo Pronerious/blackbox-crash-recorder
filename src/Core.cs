@@ -26,6 +26,12 @@ namespace BlackBox
         public string Foreground = "", TopCpuProc = "", TopGpuProc = "";
         public double TopCpuPct = double.NaN, TopGpuPct = double.NaN;
         public string Note = "";
+        // colonne aggiunte in coda al CSV dalla versione 1.2 (vuote finche' la fonte non e' disponibile)
+        public double Fps = double.NaN, Fps1Low = double.NaN, FrameTimeMs = double.NaN, CpuTctl = double.NaN;
+        public string OptiScaler = "";
+        // solo in memoria: processo in primo piano e suo uso della GPU 3D (per le sessioni di gioco)
+        public int ForegroundPid;
+        public double Fg3d = double.NaN;
     }
 
     public class EventLine
@@ -233,6 +239,7 @@ namespace BlackBox
         readonly List<Sample> history = new List<Sample>();
         readonly object hlock = new object();
         volatile bool running;
+        volatile string stopReason = "BlackBox chiuso";
         Thread thread;
 
         IntPtr q, cCpuUtil, cCpuCores, cCpuPerf, cCpuFreq, cRamCommit, cRamFree, cGpuEng, cVram, cThermal;
@@ -240,12 +247,15 @@ namespace BlackBox
         readonly object evLock = new object();
         string pendingNote = "";
 
-        public const string Header = "timestamp;cpu_util;cpu_core_max;cpu_perf_pct;cpu_mhz;ram_commit_pct;ram_free_mb;gpu_3d_pct;gpu_act_pct;gpu_mem_act_pct;gpu_power_w;gpu_power_peak_w;gpu_clk_mhz;gpu_clk_peak_mhz;gpu_mem_clk_mhz;gpu_vddc_mv;gpu_temp_edge;gpu_temp_hotspot;gpu_temp_mem;gpu_fan_rpm;gpu_fan_pct;vram_mb;acpi_temp;app_primo_piano;top_cpu_proc;top_cpu_pct;top_gpu_proc;top_gpu_pct;note";
+        public const string Header = "timestamp;cpu_util;cpu_core_max;cpu_perf_pct;cpu_mhz;ram_commit_pct;ram_free_mb;gpu_3d_pct;gpu_act_pct;gpu_mem_act_pct;gpu_power_w;gpu_power_peak_w;gpu_clk_mhz;gpu_clk_peak_mhz;gpu_mem_clk_mhz;gpu_vddc_mv;gpu_temp_edge;gpu_temp_hotspot;gpu_temp_mem;gpu_fan_rpm;gpu_fan_pct;vram_mb;acpi_temp;app_primo_piano;top_cpu_proc;top_cpu_pct;top_gpu_proc;top_gpu_pct;note;fps;fps_1low;frametime_ms;cpu_tctl;optiscaler";
+
+        public GameTracker Games;
 
         public Collector(string dir)
         {
             LogDir = dir;
             Directory.CreateDirectory(dir);
+            Games = new GameTracker(this);
         }
 
         public void Start()
@@ -269,6 +279,7 @@ namespace BlackBox
         public void Stop(string reason)
         {
             AddEvent("INFO", reason);
+            stopReason = reason;
             running = false;
             try { if (thread != null) thread.Join(2000); } catch { }
             lock (evLock) { try { if (csv != null) csv.Dispose(); } catch { } csv = null; }
@@ -315,6 +326,7 @@ namespace BlackBox
         {
             try { LastCrash = Analyzer.AnalyzeLatest(LogDir); } catch (Exception ex) { AddEvent("WARN", "Analisi crash fallita: " + ex.Message); }
             CrashAnalysisDone = true;
+            if (LastCrash != null && LastCrash.IsNew) Games.MarkTuningCheck(LastCrash.BootTime, "lo spegnimento anomalo");
             try { Analyzer.Cleanup(LogDir, 14); } catch { }
 
             InitPdh();
@@ -350,12 +362,14 @@ namespace BlackBox
                     pSum = 0; pN = 0; pMax = double.NaN; clkMax = double.NaN;
                     lock (hlock) { history.Add(s); if (history.Count > 900) history.RemoveRange(0, history.Count - 900); }
                     WriteRow(s);
+                    try { Games.OnSample(s); } catch (Exception ex) { AddEvent("WARN", "Errore nelle sessioni di gioco: " + ex.Message); }
                     lastRow = now;
                     nextSec = nextSec.AddSeconds(1);
                     if (nextSec < now) nextSec = now.AddSeconds(1);
                 }
                 Thread.Sleep(200);
             }
+            try { Games.Finish(stopReason); } catch { }
         }
 
         void InitPdh()
@@ -399,6 +413,9 @@ namespace BlackBox
         Sample BuildSample(DateTime now, double pAvg, double pMax, double clkMax, KeyValuePair<string, double> topCpu)
         {
             var s = new Sample { Time = now };
+            uint fgPid = 0;
+            try { Native.GetWindowThreadProcessId(Native.GetForegroundWindow(), out fgPid); } catch { }
+            s.ForegroundPid = (int)fgPid;
             if (q != IntPtr.Zero)
             {
                 Pdh.PdhCollectQueryData(q);
@@ -429,6 +446,7 @@ namespace BlackBox
                     double p0; perPidType.TryGetValue(key, out p0); perPidType[key] = p0 + kv.Value;
                 }
                 s.Gpu3d = perLuid.Count > 0 ? Math.Min(100, perLuid.Values.Max()) : double.NaN;
+                if (eng.Count > 0) { double fg3; s.Fg3d = perPidType.TryGetValue(fgPid + "|3D", out fg3) ? Math.Min(100, fg3) : 0; }
                 if (perPidType.Count > 0)
                 {
                     var best = perPidType.OrderByDescending(x => x.Value).First();
@@ -462,13 +480,7 @@ namespace BlackBox
             }
 
             s.TopCpuProc = topCpu.Key; s.TopCpuPct = topCpu.Value;
-            try
-            {
-                uint pid; Native.GetWindowThreadProcessId(Native.GetForegroundWindow(), out pid);
-                s.Foreground = pid != 0 ? NameOf((int)pid) : "";
-                if (pidNames.Count > 0 && pid != 0) { /* nome aggiornato se pid riciclato */ }
-            }
-            catch { }
+            try { s.Foreground = fgPid != 0 ? NameOf((int)fgPid) : ""; } catch { }
 
             lock (evLock) { s.Note = pendingNote; pendingNote = ""; }
             return s;
@@ -563,9 +575,12 @@ namespace BlackBox
                         csvDay = s.Time.Date;
                         CurrentCsv = Path.Combine(LogDir, "monitor_" + csvDay.ToString("yyyy-MM-dd") + ".csv");
                         bool fresh = !File.Exists(CurrentCsv) || new FileInfo(CurrentCsv).Length == 0;
+                        // file di oggi creato da una versione precedente: riscrivo l'intestazione con le colonne nuove
+                        // (l'analisi dei crash usa sempre l'ultima intestazione che trova)
+                        bool oldHeader = !fresh && LastHeader(CurrentCsv) != Header;
                         var fs = new FileStream(CurrentCsv, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete, 4096, FileOptions.WriteThrough);
                         csv = new StreamWriter(fs, new UTF8Encoding(false)) { AutoFlush = true };
-                        if (fresh) csv.WriteLine(Header);
+                        if (fresh || oldHeader) csv.WriteLine(Header);
                     }
                     csv.WriteLine(string.Join(";", new string[] {
                         s.Time.ToString("yyyy-MM-dd HH:mm:ss.fff"),
@@ -573,10 +588,27 @@ namespace BlackBox
                         F(s.Gpu3d,1), F(s.GpuAct,0), F(s.GpuMemAct,0), F(s.GpuPower,1), F(s.GpuPowerMax,0),
                         F(s.GpuClk,0), F(s.GpuClkMax,0), F(s.GpuMemClk,0), F(s.GpuVddc,0),
                         F(s.GpuTempEdge,0), F(s.GpuTempHot,0), F(s.GpuTempMem,0), F(s.GpuFanRpm,0), F(s.GpuFanPct,0),
-                        F(s.VramMb,0), F(s.ThermalC,1), S(s.Foreground), S(s.TopCpuProc), F(s.TopCpuPct,1), S(s.TopGpuProc), F(s.TopGpuPct,1), S(s.Note) }));
+                        F(s.VramMb,0), F(s.ThermalC,1), S(s.Foreground), S(s.TopCpuProc), F(s.TopCpuPct,1), S(s.TopGpuProc), F(s.TopGpuPct,1), S(s.Note),
+                        F(s.Fps,1), F(s.Fps1Low,1), F(s.FrameTimeMs,2), F(s.CpuTctl,1), S(s.OptiScaler) }));
                 }
                 catch { }
             }
+        }
+
+        static string LastHeader(string path)
+        {
+            string h = null;
+            try
+            {
+                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                using (var sr = new StreamReader(fs))
+                {
+                    string line;
+                    while ((line = sr.ReadLine()) != null) if (line.StartsWith("timestamp")) h = line;
+                }
+            }
+            catch { }
+            return h;
         }
 
         // ------------------------------------------------ Registro eventi di Windows
@@ -615,6 +647,13 @@ namespace BlackBox
                             else if (isApp || e.Id == 4101 || e.Id == 37) lvl = "WARN";
                             string desc = "";
                             try { desc = e.FormatDescription() ?? ""; } catch { }
+                            DateTime when = e.TimeCreated ?? DateTime.Now;
+                            try
+                            {
+                                if (prov == "Display" && e.Id == 4101) Games.OnTdr(when);
+                                if (isApp) Games.OnAppError(desc, when);
+                            }
+                            catch { }
                             desc = desc.Split('\n')[0].Trim();
                             if (desc.Length > 180) desc = desc.Substring(0, 180) + "...";
                             string label = prov.Replace("Microsoft-Windows-", "") + " " + e.Id;

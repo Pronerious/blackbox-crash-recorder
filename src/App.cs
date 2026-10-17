@@ -140,6 +140,7 @@ namespace BlackBox
             var menu = new WF.ContextMenuStrip();
             menu.Items.Add("Apri monitor", null, (s, e) => ShowWindow());
             menu.Items.Add("Ultimo report", null, (s, e) => OpenLastReport());
+            menu.Items.Add("Ultima sessione di gioco", null, (s, e) => OpenLastSession());
             menu.Items.Add("Apri cartella log", null, (s, e) => OpenLogs());
             menu.Items.Add("Guida", null, (s, e) => OpenGuide());
             menu.Items.Add(new WF.ToolStripSeparator());
@@ -278,7 +279,29 @@ namespace BlackBox
                 row.Children.Add(t1); row.Children.Add(t2); row.Children.Add(t3);
                 list.Children.Add(row);
             }
+            UpdateDriverCrashes();
             UpdateConfig();
+        }
+
+        // crash del driver video e dei giochi, raggruppati per gioco e per configurazione A/B
+        void UpdateDriverCrashes()
+        {
+            var items = SessionLog.Crashes(logDir, 120);
+            var game = F<TextBlock>("DrvGame"); var cfg = F<TextBlock>("DrvCfg");
+            if (items.Count == 0)
+            {
+                game.Text = "Nessun crash del driver video né dei giochi.";
+                game.Foreground = Green; cfg.Text = "";
+                return;
+            }
+            Func<IEnumerable<CrashItem>, string> count = g =>
+            {
+                int t = g.Count(x => x.Kind == "TDR"), c = g.Count(x => x.Kind == "crash");
+                return string.Join(", ", new[] { t > 0 ? t + " TDR" : "", c > 0 ? c + " crash del gioco" : "" }.Where(x => x != ""));
+            };
+            game.Foreground = Orange;
+            game.Text = "Per gioco:  " + string.Join("   ·   ", items.GroupBy(x => x.Game).OrderByDescending(g => g.Count()).Select(g => g.Key + " — " + count(g)));
+            cfg.Text = "Per configurazione:  " + string.Join("   ·   ", items.GroupBy(x => x.Config).OrderByDescending(g => g.Count()).Select(g => g.Key + " — " + count(g)));
         }
 
         // ------------------------------------------------------------ configurazione A/B
@@ -323,7 +346,8 @@ namespace BlackBox
             list.Children.Insert(0, tb);
             while (list.Children.Count > 300) list.Children.RemoveAt(list.Children.Count - 1);
             if (ev.Text.Contains("Kernel-Power 41")) UpdateHistory();
-            if ((ev.Level == "ERR" || ev.Text.StartsWith("Sbloccato")) && snapshot == null)
+            else if (ev.Text.Contains("Display 4101") || ev.Text.StartsWith("Sessione di gioco finita")) UpdateDriverCrashes();
+            if ((ev.Level == "ERR" || ev.Text.StartsWith("Sbloccato") || ev.Text.StartsWith("Adrenalin ha ripristinato")) && snapshot == null)
                 tray.ShowBalloonTip(8000, "BlackBox", ev.Text, WF.ToolTipIcon.Warning);
         }
 
@@ -360,6 +384,13 @@ namespace BlackBox
             var r = new DirectoryInfo(logDir).GetFiles("crash_*.txt").OrderByDescending(f => f.LastWriteTime).FirstOrDefault();
             if (r != null) OpenFile(r.FullName);
             else MessageBox.Show("Nessun report ancora: verrà creato al primo spegnimento anomalo con BlackBox attivo.", "BlackBox");
+        }
+
+        void OpenLastSession()
+        {
+            var r = new DirectoryInfo(logDir).GetFiles("sessione_*.txt").OrderByDescending(f => f.LastWriteTime).FirstOrDefault();
+            if (r != null) OpenFile(r.FullName);
+            else MessageBox.Show("Nessuna sessione di gioco ancora: il report viene creato quando chiudi un gioco.", "BlackBox");
         }
 
         // la guida e' dentro l'exe: la scrive in Documenti\BlackBox e la apre con il Blocco note
@@ -480,7 +511,10 @@ namespace BlackBox
                 F<TextBlock>("ActFg").Text = s.Foreground != "" ? s.Foreground : "--";
                 F<TextBlock>("ActCpu").Text = s.TopCpuProc != "" ? s.TopCpuProc + "  (" + Fmt(s.TopCpuPct, 1) + "%)" : "--";
                 F<TextBlock>("ActGpu").Text = s.TopGpuProc != "" ? s.TopGpuProc + "  (" + Fmt(s.TopGpuPct, 1) + "%)" : "--";
-                F<TextBlock>("ActMax").Text = "GPU " + Fmt(col.SessionMaxPower) + " W · hotspot " + Fmt(col.SessionMaxHot) + " °C · in registrazione da " + (int)(DateTime.Now - col.StartedAt).TotalMinutes + " min";
+                string game = col.Games.StatusText;
+                F<TextBlock>("ActGame").Text = game != "" ? game : "nessuna (parte da sola quando giochi)";
+                F<TextBlock>("ActGame").Foreground = game != "" ? Green : Muted;
+                F<TextBlock>("ActMax").Text ="GPU " + Fmt(col.SessionMaxPower) + " W · hotspot " + Fmt(col.SessionMaxHot) + " °C · in registrazione da " + (int)(DateTime.Now - col.StartedAt).TotalMinutes + " min";
 
                 F<Ellipse>("RecDot").Opacity = tick % 2 == 1 ? 1 : 0.35;
                 if (tick % 60 == 0) UpdateConfig();

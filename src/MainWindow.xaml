@@ -98,7 +98,7 @@
           <TextBlock Style="{StaticResource H}" Text="ATTIVITÀ IN QUESTO MOMENTO"/>
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-            <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+            <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
             <TextBlock Grid.Row="0" Foreground="#8A91A0" Text="App in primo piano" Margin="0,2"/>
             <TextBlock Grid.Row="0" Grid.Column="1" x:Name="ActFg" FontWeight="SemiBold" Margin="0,2" TextTrimming="CharacterEllipsis"/>
             <TextBlock Grid.Row="1" Foreground="#8A91A0" Text="Più CPU" Margin="0,2"/>
@@ -107,6 +107,8 @@
             <TextBlock Grid.Row="2" Grid.Column="1" x:Name="ActGpu" Margin="0,2" TextTrimming="CharacterEllipsis"/>
             <TextBlock Grid.Row="3" Foreground="#8A91A0" Text="Massimi sessione" Margin="0,2"/>
             <TextBlock Grid.Row="3" Grid.Column="1" x:Name="ActMax" Margin="0,2" TextWrapping="Wrap"/>
+            <TextBlock Grid.Row="4" Foreground="#8A91A0" Text="Sessione di gioco" Margin="0,2"/>
+            <TextBlock Grid.Row="4" Grid.Column="1" x:Name="ActGame" Margin="0,2" TextTrimming="CharacterEllipsis"/>
           </Grid>
         </StackPanel>
       </Border>
@@ -136,6 +138,11 @@
         <Border Style="{StaticResource Card}" Grid.Row="0">
           <DockPanel>
             <TextBlock DockPanel.Dock="Top" Style="{StaticResource H}" x:Name="HistTitle" Text="SPEGNIMENTI ANOMALI (KERNEL-POWER 41)"/>
+            <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+              <TextBlock Style="{StaticResource H}" Margin="0,0,0,4" Text="CRASH DEL DRIVER VIDEO (TDR) E DEI GIOCHI — ultimi 120 giorni"/>
+              <TextBlock x:Name="DrvGame" TextWrapping="Wrap" FontSize="12.5"/>
+              <TextBlock x:Name="DrvCfg" TextWrapping="Wrap" FontSize="12.5" Foreground="#8A91A0" Margin="0,2,0,0"/>
+            </StackPanel>
             <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel x:Name="HistList"/></ScrollViewer>
           </DockPanel>
         </Border>
