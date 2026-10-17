@@ -142,6 +142,7 @@ namespace BlackBox
             loadClk.Clear(); typicalClk = double.NaN; thrRun = 0;
             current = c;
             WriteState(c, s.Time);
+            try { Fps.Start(c.Pid); } catch { }
             col.AddEvent("INFO", "Sessione di gioco iniziata: " + c.Game);
         }
 
@@ -284,7 +285,9 @@ namespace BlackBox
             double edge = Max(all, x => x.GpuTempEdge), hot = Max(all, x => x.GpuTempHot);
             double dAvg = Avg(play, x => x.GpuTempHot - x.GpuTempEdge), dMax = Max(all, x => x.GpuTempHot - x.GpuTempEdge);
             double vram = Max(all, x => x.VramMb) / 1024.0;
-            double fps = Avg(all, x => x.Fps), fpsLow = Avg(all, x => x.Fps1Low);
+            double fps, fpsLow;
+            Fps.SessionStats(out fps, out fpsLow);
+            try { Fps.Stop(); } catch { }
             string opti = all.Select(x => x.OptiScaler).LastOrDefault(x => !string.IsNullOrEmpty(x)) ?? "";
             if (load.Count < 30) clkMax = mvLoad = double.NaN;   // troppo poco carico per un confronto affidabile
 
@@ -312,7 +315,7 @@ namespace BlackBox
             Row(sb, "VRAM massima",double.IsNaN(vram) ? "n/d" : vram.ToString("0.0", CultureInfo.InvariantCulture) + " GB");
             sb.AppendLine();
             sb.AppendLine("--- FPS ---");
-            Row(sb, "FPS medio / 1% low", double.IsNaN(fps) ? "n/d (FPS non ancora attivi)" : N0(fps) + " / " + N0(fpsLow));
+            Row(sb, "FPS medio / 1% low", double.IsNaN(fps) ? "n/d (" + (Fps.Status != "" ? Fps.Status : "nessun fotogramma letto") + ")" : N0(fps) + " / " + N0(fpsLow));
             sb.AppendLine();
             sb.AppendLine("--- Stabilità ---");
             if (c.Throttles.Count == 0) sb.AppendLine("  Throttling: nessuno");

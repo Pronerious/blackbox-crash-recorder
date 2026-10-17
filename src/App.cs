@@ -1,5 +1,6 @@
-﻿// BlackBox, la scatola nera del PC - applicazione con icona nella barra di sistema.
-// PRIVACY: nessuna connessione di rete, nessuna telemetria. I dati restano in Documenti\BlackBox.
+// BlackBox, la scatola nera del PC - applicazione con icona nella barra di sistema.
+// PRIVACY: nessuna telemetria. Le uniche connessioni di rete sono i download da GitHub che l'utente avvia con un pulsante
+// (PresentMon, OptiScaler). I dati restano in Documenti\BlackBox.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -122,7 +123,7 @@ namespace BlackBox
 
             col = new Collector(logDir);
             col.Start();
-            F<TextBlock>("SubTitle").Text = "Registrazione su disco ogni secondo  •  100% locale, nessuna connessione di rete  •  " + logDir;
+            F<TextBlock>("SubTitle").Text = "Registrazione su disco ogni secondo  •  100% locale, internet solo per i download che avvii tu  •  " + logDir;
 
             LoadPastEvents();
             WireButtons();
@@ -209,7 +210,7 @@ namespace BlackBox
             var u = new TextBlock { Text = " " + unit, FontSize = 14, Foreground = Muted, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(2, 0, 0, 6) };
             vp.Children.Add(v); vp.Children.Add(u);
             var sub = new TextBlock { FontSize = 12, Foreground = Muted, TextTrimming = TextTrimming.CharacterEllipsis };
-            var cv = new Canvas { Height = 62, Margin = new Thickness(0, 8, 0, 0), ClipToBounds = true };
+            var cv = new Canvas { Height = 46, Margin = new Thickness(0, 8, 0, 0), ClipToBounds = true };
             var c = (Color)ColorConverter.ConvertFromString(color);
             var fill = new Polygon { Fill = new LinearGradientBrush(Color.FromArgb(90, c.R, c.G, c.B), Color.FromArgb(0, c.R, c.G, c.B), 90) };
             var line = new Polyline { StrokeThickness = 1.8, StrokeLineJoin = PenLineJoin.Round, Stroke = B(color) };
@@ -420,6 +421,7 @@ namespace BlackBox
         void WireButtons()
         {
             F<Button>("BtnReport").Click += (s, e) => OpenLastReport();
+            F<Button>("BtnFps").Click += (s, e) => OnFpsButton();
             F<Button>("BtnLogs").Click += (s, e) => OpenLogs();
             F<Button>("BtnGuide").Click += (s, e) => OpenGuide();
             F<Button>("BtnTray").Click += (s, e) => HideToTray();
@@ -516,6 +518,7 @@ namespace BlackBox
                 string game = col.Games.StatusText;
                 F<TextBlock>("ActGame").Text = game != "" ? game : "nessuna (parte da sola quando giochi)";
                 F<TextBlock>("ActGame").Foreground = game != "" ? Green : Muted;
+                UpdateFps(s);
                 F<TextBlock>("ActMax").Text ="GPU " + Fmt(col.SessionMaxPower) + " W · hotspot " + Fmt(col.SessionMaxHot) + " °C · in registrazione da " + (int)(DateTime.Now - col.StartedAt).TotalMinutes + " min";
 
                 F<Ellipse>("RecDot").Opacity = tick % 2 == 1 ? 1 : 0.35;
@@ -527,6 +530,77 @@ namespace BlackBox
             {
                 F<TextBlock>("SubTitle").Text = "Errore interfaccia: " + ex.Message;
             }
+        }
+
+        // ------------------------------------------------------------ FPS (PresentMon)
+        bool fpsBusy, fpsRelogin;
+
+        void UpdateFps(Sample s)
+        {
+            var t = F<TextBlock>("ActFps"); var b = F<Button>("BtnFps");
+            b.Visibility = Visibility.Collapsed; t.Foreground = Text;
+            if (fpsBusy) { t.Text = "un momento..."; t.Foreground = Muted; return; }
+            if (!Fps.ToolPresent)
+            {
+                t.Text = "serve PresentMon (gratuito, di Intel)"; t.Foreground = Muted;
+                b.Content = "Scarica PresentMon"; b.Visibility = Visibility.Visible; return;
+            }
+            if (!Fps.HasPermission || Fps.Denied)
+            {
+                t.Foreground = Orange;
+                if (fpsRelogin) { t.Text = "permesso dato: esci da Windows e rientra (o riavvia)"; return; }
+                t.Text = "manca il permesso per leggere gli FPS";
+                b.Content = "Abilita FPS (chiede admin una volta)"; b.Visibility = Visibility.Visible; return;
+            }
+            if (!double.IsNaN(s.Fps))
+            {
+                t.Text = Fmt(s.Fps) + " FPS · 1% low " + Fmt(s.Fps1Low) + " · " + Fmt(s.FrameTimeMs, 1) + " ms";
+                t.Foreground = s.Fps < 30 ? Red : s.Fps < 50 ? Orange : Green;
+                return;
+            }
+            t.Foreground = Muted;
+            t.Text = Fps.Running ? (Fps.Status != "" ? Fps.Status : "in attesa dei fotogrammi") : "si misurano durante le sessioni di gioco" + (Fps.ToolVersion != "" ? " (PresentMon " + Fps.ToolVersion + ")" : "");
+        }
+
+        void OnFpsButton()
+        {
+            if (fpsBusy) return;
+            if (!Fps.ToolPresent)
+            {
+                var r = MessageBox.Show("BlackBox scaricherà PresentMon (circa 1 MB) dalla pagina ufficiale di Intel su GitHub:\n" +
+                    "github.com/GameTechDev/PresentMon\n\nÈ l'unica connessione a internet, e solo perché l'hai chiesta tu. " +
+                    "Il file viene controllato (firma digitale di Intel) e salvato in Documenti\\BlackBox\\tools.\n\nProcedo?",
+                    "Scarica PresentMon", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (r != MessageBoxResult.Yes) return;
+                fpsBusy = true;
+                new Thread(() =>
+                {
+                    string msg; bool ok = false;
+                    try { msg = "PresentMon " + Fps.Download() + " scaricato e verificato"; ok = true; }
+                    catch (Exception ex) { msg = "Download di PresentMon non riuscito: " + ex.Message; }
+                    col.AddEvent(ok ? "INFO" : "WARN", msg);
+                    app.Dispatcher.BeginInvoke(new Action(() => { fpsBusy = false; MessageBox.Show(msg, "BlackBox"); }));
+                }) { IsBackground = true }.Start();
+                return;
+            }
+            var q = MessageBox.Show("Per leggere gli FPS Windows deve permettere a BlackBox di vedere gli eventi della grafica.\n\n" +
+                "Ora Windows chiederà UNA VOLTA SOLA di confermare come amministratore: il tuo utente verrà aggiunto al gruppo " +
+                "«Performance Log Users». BlackBox continuerà a funzionare senza permessi di amministratore.\n\n" +
+                "Dopo bisogna uscire da Windows e rientrare (o riavviare) perché valga.\n\nProcedo?",
+                "Abilita FPS", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (q != MessageBoxResult.Yes) return;
+            fpsBusy = true;
+            new Thread(() =>
+            {
+                string err; bool ok = Fps.RequestPermission(out err);
+                if (ok) col.AddEvent("INFO", "Permesso per gli FPS richiesto: vale dopo essere usciti da Windows e rientrati");
+                app.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    fpsBusy = false;
+                    if (ok) { fpsRelogin = true; MessageBox.Show("Fatto. Esci da Windows e rientra (o riavvia il PC): da lì gli FPS funzioneranno.", "BlackBox"); }
+                    else MessageBox.Show("Permesso non dato: " + err, "BlackBox");
+                }));
+            }) { IsBackground = true }.Start();
         }
 
         void SaveSnapshot()

@@ -98,7 +98,7 @@
           <TextBlock Style="{StaticResource H}" Text="ATTIVITÀ IN QUESTO MOMENTO"/>
           <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-            <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+            <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
             <TextBlock Grid.Row="0" Foreground="#8A91A0" Text="App in primo piano" Margin="0,2"/>
             <TextBlock Grid.Row="0" Grid.Column="1" x:Name="ActFg" FontWeight="SemiBold" Margin="0,2" TextTrimming="CharacterEllipsis"/>
             <TextBlock Grid.Row="1" Foreground="#8A91A0" Text="Più CPU" Margin="0,2"/>
@@ -109,6 +109,11 @@
             <TextBlock Grid.Row="3" Grid.Column="1" x:Name="ActMax" Margin="0,2" TextWrapping="Wrap"/>
             <TextBlock Grid.Row="4" Foreground="#8A91A0" Text="Sessione di gioco" Margin="0,2"/>
             <TextBlock Grid.Row="4" Grid.Column="1" x:Name="ActGame" Margin="0,2" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Grid.Row="5" Foreground="#8A91A0" Text="FPS" Margin="0,2" VerticalAlignment="Center"/>
+            <DockPanel Grid.Row="5" Grid.Column="1" Margin="0,2">
+              <Button x:Name="BtnFps" DockPanel.Dock="Right" Padding="10,3" Visibility="Collapsed"/>
+              <TextBlock x:Name="ActFps" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+            </DockPanel>
           </Grid>
         </StackPanel>
       </Border>
@@ -118,7 +123,7 @@
         <DockPanel>
           <TextBlock DockPanel.Dock="Top" Style="{StaticResource H}" Text="CONFIGURAZIONE ATTUALE (per il test A/B)"/>
           <TextBlock DockPanel.Dock="Top" Foreground="#8A91A0" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,8"
-                     Text="Scrivi cosa hai impostato (es. &quot;CO -20, EXPO ON, GPU UV 1100mV&quot;). Ogni volta che cambi qualcosa nel BIOS o nel software della scheda video aggiornala: ogni spegnimento verrà associato alla configurazione attiva."/>
+                     Text="Scrivi cosa hai impostato (es. &quot;CO -20, EXPO ON, GPU UV 1100mV&quot;) e aggiornalo a ogni modifica: spegnimenti e crash vengono associati alla configurazione attiva."/>
           <Grid DockPanel.Dock="Top">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <TextBox x:Name="CfgBox" Background="#0E1015" Foreground="#E6E8EE" BorderBrush="#2C3240" Padding="8,6" FontSize="13" CaretBrush="#E6E8EE"/>

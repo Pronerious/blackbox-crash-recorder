@@ -23,6 +23,7 @@ programma: pulsante **Guida** in alto, oppure tasto destro sull'icona → **Guid
 9. [Privacy](#9-privacy)
 10. [Sessioni di gioco](#10-sessioni-di-gioco)
 11. [Temperatura della CPU (con HWiNFO)](#11-temperatura-della-cpu-con-hwinfo)
+12. [FPS e frame time (con PresentMon)](#12-fps-e-frame-time-con-presentmon)
 
 ---
 
@@ -148,6 +149,8 @@ Tutto sta in `Documenti\BlackBox`:
 | `sessione_<gioco>_<data>.txt` | il report di ogni partita (punto 10) |
 | `sessioni.csv` | una riga per partita: serve ai confronti; si apre con Excel |
 | `sessione_in_corso.txt`, `controllo_tuning.txt` | file di lavoro: si cancellano da soli |
+| `impostazioni.ini` | le impostazioni di BlackBox |
+| `tools\PresentMon.exe` | PresentMon, se l'hai scaricato (punto 12) |
 | `GUIDA.txt` | questa guida, creata quando la apri dal programma |
 
 ## 8. Problemi e soluzioni
@@ -164,6 +167,10 @@ AMD e NVIDIA con il driver installato.
 **La temperatura della CPU dice "n/d".** BlackBox la prende da HWiNFO: apri HWiNFO
 e controlla che la memoria condivisa sia accesa (punto 11).
 
+**Gli FPS restano a "--".** Gli FPS si misurano solo durante una sessione di gioco.
+Se il gioco è aperto da poco, aspetta 20 secondi. Se nella riga *FPS* c'è un pulsante,
+segui il punto 12.
+
 **Non parte la sessione di gioco.** Parte solo se il gioco è in primo piano e usa la
 scheda video oltre il 60% per 20 secondi. Giochi molto leggeri (o con FPS bloccati
 bassi) possono restare sotto: è normale.
@@ -178,7 +185,8 @@ chiude: va chiuso a mano da Gestione attività (Ctrl + Shift + Esc).
 
 ## 9. Privacy
 
-- Nessuna connessione a internet, nessun invio di dati, nessun aggiornamento automatico.
+- Nessun invio di dati, nessun aggiornamento automatico. L'unica connessione a internet
+  è il download di PresentMon da GitHub, e solo quando premi tu il pulsante.
 - Legge solo i contatori di Windows, il driver della scheda video, il Registro eventi
   e, se aperti, i valori pubblicati da HWiNFO o LibreHardwareMonitor.
 - L'unica azione sul sistema è lo sblocco del punto 5, limitato all'elenco fisso.
@@ -229,3 +237,33 @@ Nella versione gratuita di HWiNFO la memoria condivisa si spegne da sola dopo
 
 In alternativa va bene anche **LibreHardwareMonitor** aperto.
 Senza nessuno dei due, la temperatura resta "n/d" e tutto il resto funziona.
+
+## 12. FPS e frame time (con PresentMon)
+
+Gli FPS li misura **PresentMon**, un programma gratuito di Intel (licenza MIT) che
+legge da Windows quando il gioco mostra ogni fotogramma. Gira solo durante le
+sessioni di gioco e si chiude da solo alla fine.
+
+**La prima volta:**
+
+1. Nella finestra, riquadro *Attività*, riga **FPS**: premi **Scarica PresentMon**.
+   BlackBox lo scarica dalla pagina ufficiale (github.com/GameTechDev/PresentMon),
+   controlla la firma digitale di Intel e lo mette in `Documenti\BlackBox\tools`.
+2. Se compare **Abilita FPS (chiede admin una volta)**, premilo e conferma la finestra
+   di Windows. Il tuo utente entra nel gruppo *Performance Log Users*, che può leggere
+   questi dati. Poi **esci da Windows e rientra** (o riavvia). Su molti PC il permesso
+   c'è già e il pulsante non compare.
+
+Da lì in poi, mentre giochi la riga *FPS* mostra:
+
+- **FPS**: fotogrammi al secondo degli ultimi 2 secondi;
+- **1% low**: gli FPS dei momenti peggiori dell'ultimo minuto (l'1% dei fotogrammi più
+  lenti). Se è molto più basso degli FPS, il gioco "scatta" anche se la media è alta;
+- **ms**: il tempo medio di un fotogramma (frame time).
+
+FPS medio e 1% low dell'intera partita finiscono nel report della sessione e in
+`sessioni.csv`. Con la generazione di fotogrammi (AFMF, Frame Generation) BlackBox
+conta i fotogrammi del gioco: Adrenalin può mostrare un numero più alto.
+
+Se preferisci usare un PresentMon che hai già, scrivi il percorso in
+`Documenti\BlackBox\impostazioni.ini` alla riga `presentmon=` (con BlackBox chiuso).

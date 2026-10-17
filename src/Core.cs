@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -255,6 +255,8 @@ namespace BlackBox
         {
             LogDir = dir;
             Directory.CreateDirectory(dir);
+            Settings.Load(dir);
+            Fps.Init(dir);
             Games = new GameTracker(this);
         }
 
@@ -482,6 +484,7 @@ namespace BlackBox
 
             s.TopCpuProc = topCpu.Key; s.TopCpuPct = topCpu.Value;
             s.CpuTctl = CpuTemp.Value;
+            Fps.Current(out s.Fps, out s.Fps1Low, out s.FrameTimeMs);
             try { s.Foreground = fgPid != 0 ? NameOf((int)fgPid) : ""; } catch { }
 
             lock (evLock) { s.Note = pendingNote; pendingNote = ""; }
