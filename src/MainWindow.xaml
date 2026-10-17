@@ -18,6 +18,7 @@
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Background" Value="#2A303D"/></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter TargetName="b" Property="Opacity" Value="0.38"/></Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
         </Setter.Value>
@@ -60,6 +61,7 @@
       <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
         <Button x:Name="BtnReport" Content="Ultimo report"/>
         <Button x:Name="BtnLogs" Content="Apri cartella log"/>
+        <Button x:Name="BtnGames" Content="Giochi &amp; OptiScaler"/>
         <Button x:Name="BtnOverlay" Content="Overlay"/>
         <Button x:Name="BtnAuto" Content="Avvio automatico: OFF"/>
         <Button x:Name="BtnGuide" Content="Guida"/>

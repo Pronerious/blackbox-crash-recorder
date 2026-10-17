@@ -143,6 +143,7 @@ namespace BlackBox
             menu.Items.Add("Apri monitor", null, (s, e) => ShowWindow());
             menu.Items.Add("Ultimo report", null, (s, e) => OpenLastReport());
             menu.Items.Add("Ultima sessione di gioco", null, (s, e) => OpenLastSession());
+            menu.Items.Add("Giochi && OptiScaler", null, (s, e) => { ShowWindow(); OpenGames(); });
             menu.Items.Add("Apri cartella log", null, (s, e) => OpenLogs());
             menu.Items.Add("Guida", null, (s, e) => OpenGuide());
             menu.Items.Add(new WF.ToolStripSeparator());
@@ -498,6 +499,7 @@ namespace BlackBox
         {
             F<Button>("BtnReport").Click += (s, e) => OpenLastReport();
             F<Button>("BtnFps").Click += (s, e) => OnFpsButton();
+            F<Button>("BtnGames").Click += (s, e) => OpenGames();
             F<TextBlock>("ActMax").MouseLeftButtonUp += (s, e) => ShowHealth();
             F<Button>("BtnOverlay").Click += (s, e) => { if (overlay != null) overlay.SetEnabled(!overlay.Enabled); };
             UpdateOverlayBtn();
@@ -720,6 +722,15 @@ namespace BlackBox
             sb.AppendLine("Se cambi scheda video o aggiorni il driver, BlackBox se ne accorge e si adatta. La guida completa è nel pulsante Guida.");
             ShowWindow();
             MessageBox.Show(sb.ToString(), "BlackBox — il tuo PC", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        OptiWindow optiWin;
+        void OpenGames()
+        {
+            if (optiWin != null) { optiWin.Activate(); return; }
+            optiWin = new OptiWindow(win, col);
+            optiWin.Closed += () => optiWin = null;
+            optiWin.Show();
         }
 
         void ShowHealth()

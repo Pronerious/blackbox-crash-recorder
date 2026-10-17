@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace BlackBox
 {
@@ -26,6 +27,9 @@ namespace BlackBox
         public bool LastThrottleThermal;
         public double ThermalThrottleSec;
         public double BaseEff = double.NaN;   // FPS reali per watt nelle partite precedenti allo stesso gioco
+        // OptiScaler in questa partita
+        public string OptiInstalled = "", OptiProxy = "", OptiStatus = "", OptiCrash = "";
+        public DateTime OptiCheckAt = DateTime.MaxValue; public int OptiChecks;
 
         // giudizio sullo undervolt/overclock in questa partita: 0 = ok, 1 = attenzione, 2 = problema
         public string UvVerdict(out int level)
@@ -115,10 +119,12 @@ namespace BlackBox
             }
             if (!Alive(c)) { c.ExitedAt = s.Time; EndThrottle(c); return; }
 
+            Fps.GameInFront = s.ForegroundPid == c.Pid;
             if (s.ForegroundPid == c.Pid)
             {
                 c.LastFg = s.Time;
                 c.Samples.Add(s);
+                if (s.Time >= c.OptiCheckAt) CheckOpti(c);
                 CheckThrottle(c, s);
                 CheckTuning(c, s);
             }
@@ -166,6 +172,17 @@ namespace BlackBox
             loadClk.Clear(); typicalClk = double.NaN; thrRun = 0;
             current = c;
             WriteState(c, s.Time);
+            try
+            {
+                Opti.RememberGame(c.ExePath);
+                if (c.ExePath != "")
+                {
+                    var om = Opti.ReadManifest(Path.GetDirectoryName(c.ExePath));
+                    c.OptiInstalled = om.Version; c.OptiProxy = om.Proxy;
+                    c.OptiCheckAt = s.Time.AddSeconds(15);   // OptiScaler si carica all'avvio del gioco: controllo tra poco
+                }
+            }
+            catch { }
             try { Fps.Start(c.Pid); } catch { }
             // durante la partita BlackBox cede sempre il passo al gioco e libera la memoria che non usa
             try { using (var me = Process.GetCurrentProcess()) me.PriorityClass = ProcessPriorityClass.BelowNormal; } catch { }
@@ -274,6 +291,21 @@ namespace BlackBox
             }
         }
 
+        // ------------------------------------------------ OptiScaler e' caricato nel gioco?
+        void CheckOpti(GameSession c)
+        {
+            string loaded = Opti.LoadedIn(c.Pid);
+            c.OptiChecks++;
+            c.OptiCheckAt = c.OptiChecks < 3 && loaded == null ? DateTime.Now.AddSeconds(30) : DateTime.MaxValue;
+            if (loaded != null) c.OptiStatus = "attivo (" + loaded + ")";
+            else if (c.OptiInstalled != "") c.OptiStatus = c.OptiChecks >= 3 ? "installato ma NON caricato" : "installato, in attesa";
+            if (loaded == null && c.OptiInstalled != "" && c.OptiChecks == 3)
+                col.AddEvent("WARN", "OptiScaler è installato in " + c.Game + " ma il gioco non lo carica: prova un altro nome DLL (es. winmm.dll o version.dll) in Giochi & OptiScaler.");
+            if (loaded != null && c.OptiChecks == 1) col.AddEvent("INFO", "OptiScaler attivo in " + c.Game + " (" + loaded + ")");
+        }
+
+        static string OptiKey(GameSession c) { return "opti_esito:" + (c.ExePath == "" ? c.Game : Path.GetDirectoryName(c.ExePath)); }
+
         // ------------------------------------------------ eventi dal Registro di Windows
         public void OnTdr(DateTime t)
         {
@@ -290,6 +322,18 @@ namespace BlackBox
             string first = description.Split('\n')[0].Trim();
             if (first.Length > 160) first = first.Substring(0, 160) + "...";
             c.Crashes.Add(t.ToString("HH:mm:ss") + "  " + first);
+            // il modulo in errore e' una DLL di OptiScaler nella cartella del gioco?
+            if (c.ExePath != "")
+            {
+                string dir = Path.GetDirectoryName(c.ExePath);
+                foreach (Match m in Regex.Matches(description, Regex.Escape(dir) + @"\\([^\\\s,]+\.(?:dll|asi))", RegexOptions.IgnoreCase))
+                    if (Opti.IsOptiModule(m.Groups[1].Value, c.OptiProxy))
+                    {
+                        c.OptiCrash = m.Groups[1].Value;
+                        col.AddEvent("WARN", "Crash di " + c.Game + " causato da OptiScaler (modulo " + c.OptiCrash + "): prova un altro nome DLL (winmm.dll / version.dll) o rimuovilo da Giochi & OptiScaler.");
+                        break;
+                    }
+            }
         }
 
         // ------------------------------------------------ fine sessione: report + riga in sessioni.csv
@@ -320,7 +364,10 @@ namespace BlackBox
             bool fg = !double.IsNaN(fgShare) && fgShare > 0.2;
             try { Fps.Stop(); } catch { }
             try { using (var me = Process.GetCurrentProcess()) me.PriorityClass = ProcessPriorityClass.Normal; } catch { }
-            string opti = all.Select(x => x.OptiScaler).LastOrDefault(x => !string.IsNullOrEmpty(x)) ?? "";
+            string opti = c.OptiStatus != "" ? c.OptiStatus : (all.Select(x => x.OptiScaler).LastOrDefault(x => !string.IsNullOrEmpty(x)) ?? "");
+            if (c.OptiCrash != "") Settings.Set(OptiKey(c), "problemi|" + DateTime.Now.ToString("dd/MM HH:mm") + "|crash nel modulo " + c.OptiCrash);
+            else if (c.OptiStatus.StartsWith("attivo")) Settings.Set(OptiKey(c), "attivo|" + DateTime.Now.ToString("dd/MM HH:mm") + "|" + c.OptiStatus);
+            else if (c.OptiInstalled != "" && c.OptiChecks >= 3) Settings.Set(OptiKey(c), "problemi|" + DateTime.Now.ToString("dd/MM HH:mm") + "|non caricato dal gioco");
             if (load.Count < 30) clkMax = mvLoad = double.NaN;   // troppo poco carico per un confronto affidabile
 
             string name = "sessione_" + Safe(c.Game) + "_" + c.Start.ToString("yyyy-MM-dd_HHmm") + ".txt";
@@ -461,7 +508,8 @@ namespace BlackBox
     {
         public DateTime Start, End;
         public string Game = "", Config = "", Report = "";
-        public double ClkMax = double.NaN, MvLoad = double.NaN, Eff = double.NaN;
+        public double ClkMax = double.NaN, MvLoad = double.NaN, Eff = double.NaN, Fps = double.NaN, Low = double.NaN, Power = double.NaN;
+        public string Opti = "";
         public int Tdr, Crash;
     }
 
@@ -523,6 +571,10 @@ namespace BlackBox
                     if (double.TryParse(g("clock_max_carico_mhz"), NumberStyles.Float, CultureInfo.InvariantCulture, out d)) r.ClkMax = d;
                     if (double.TryParse(g("mv_carico"), NumberStyles.Float, CultureInfo.InvariantCulture, out d)) r.MvLoad = d;
                     if (double.TryParse(g("fps_per_watt"), NumberStyles.Float, CultureInfo.InvariantCulture, out d)) r.Eff = d;
+                    if (double.TryParse(g("fps_medio"), NumberStyles.Float, CultureInfo.InvariantCulture, out d)) r.Fps = d;
+                    if (double.TryParse(g("fps_1low"), NumberStyles.Float, CultureInfo.InvariantCulture, out d)) r.Low = d;
+                    if (double.TryParse(g("potenza_media_w"), NumberStyles.Float, CultureInfo.InvariantCulture, out d)) r.Power = d;
+                    r.Opti = g("optiscaler");
                     if (int.TryParse(g("tdr"), out n)) r.Tdr = n;
                     if (int.TryParse(g("crash_gioco"), out n)) r.Crash = n;
                     res.Add(r);

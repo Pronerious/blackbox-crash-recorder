@@ -20,9 +20,11 @@ namespace BlackBox
         static readonly Dictionary<string, string> values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         static readonly object lk = new object();
 
+        public static string Path { get { return path; } }
+
         public static void Load(string dir)
         {
-            path = Path.Combine(dir, "impostazioni.ini");
+            path = System.IO.Path.Combine(dir, "impostazioni.ini");
             lock (lk)
             {
                 values.Clear();
@@ -166,6 +168,18 @@ namespace BlackBox
         // (es. 8 ms quelli veri, 1 ms quelli generati) e si alternano con quelli veri. Soglia aggiornata ogni secondo.
         static long sessCounted; static double sessRealF, sessFgF; static int fgMiss;
         public static volatile int FgFactor = 1;
+        // gioco in secondo piano (es. Alt+Tab): disegna pochissimo e falserebbe 1% low e medie, quindi quei fotogrammi non contano
+        static volatile bool inFront = true;
+        public static bool GameInFront
+        {
+            get { return inFront; }
+            set
+            {
+                if (value == inFront) return;
+                inFront = value;
+                if (value) lock (lk) { frames.Clear(); lastLine = DateTime.MinValue; }   // si riparte puliti al ritorno in gioco
+            }
+        }
         static double lastT = double.NaN; static DateTime lastLine = DateTime.MinValue;
         // statistiche dell'intera sessione: istogramma del frame time a passi di 0,1 ms (fino a 250 ms)
         static readonly long[] hist = new long[2501];
@@ -261,6 +275,7 @@ namespace BlackBox
             lock (lk)
             {
                 frames.Clear(); lastT = double.NaN; lastLine = DateTime.MinValue;
+                inFront = true;
                 Array.Clear(hist, 0, hist.Length); sessFrames = 0; sessMs = 0; sessCounted = 0; sessRealF = 0; sessFgF = 0; fgMiss = 0; FgFactor = 1;
                 chainCount.Clear(); mainChain = "";
                 Array.Clear(graph, 0, graph.Length); graphPos = 0;
@@ -350,6 +365,7 @@ namespace BlackBox
         // solo la catena di presentazione con piu' fotogrammi (il gioco), non overlay o launcher dello stesso processo
         static void Add(double t, double ft, double gpu, string chain)
         {
+            if (!inFront) return;
             lock (lk)
             {
                 long c; chainCount.TryGetValue(chain, out c); chainCount[chain] = ++c;

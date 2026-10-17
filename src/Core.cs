@@ -272,6 +272,7 @@ namespace BlackBox
             Directory.CreateDirectory(dir);
             Settings.Load(dir);
             Fps.Init(dir);
+            Opti.Init(dir);
             Games = new GameTracker(this);
         }
 
@@ -512,6 +513,7 @@ namespace BlackBox
 
             s.TopCpuProc = topCpu.Key; s.TopCpuPct = topCpu.Value;
             s.CpuTctl = CpuTemp.Value;
+            var gs = Games.Current; if (gs != null) s.OptiScaler = gs.OptiStatus;
             Fps.Current(out s.Fps, out s.Fps1Low, out s.FrameTimeMs, out s.FpsReal);
             s.FgFactor = double.IsNaN(s.Fps) ? 1 : Fps.FgFactor;
             try { s.Foreground = fgPid != 0 ? NameOf((int)fgPid) : ""; } catch { }

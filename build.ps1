@@ -53,6 +53,6 @@ $refs = @("$wpf\PresentationFramework.dll", "$wpf\PresentationCore.dll", "$wpf\W
           "$fw\System.Windows.Forms.dll", "$fw\System.Drawing.dll", "$fw\System.Core.dll", "$fw\System.Xml.dll", "$fw\System.Management.dll") | ForEach-Object { "/r:$_" }
 $exe = Join-Path $dist 'BlackBox.exe'
 & "$fw\csc.exe" /nologo /nowarn:0414,0168,0219 /target:winexe /platform:x64 /optimize+ /codepage:65001 "/out:$exe" "/win32icon:$icoPath" `
-    "/resource:$src\MainWindow.xaml,MainWindow.xaml" "/resource:$icoPath,app.ico" "/resource:$root\GUIDA.md,GUIDA.md" @refs "$src\App.cs" "$src\Core.cs" "$src\Sessions.cs" "$src\CpuTemp.cs" "$src\Fps.cs" "$src\Overlay.cs" "$src\Health.cs" "$src\Hardware.cs"
+    "/resource:$src\MainWindow.xaml,MainWindow.xaml" "/resource:$icoPath,app.ico" "/resource:$root\GUIDA.md,GUIDA.md" @refs (Get-ChildItem "$src\*.cs" | ForEach-Object FullName)
 if ($LASTEXITCODE -ne 0) { throw "Compilazione fallita" }
 "OK -> $exe"
