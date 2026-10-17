@@ -22,6 +22,23 @@ namespace BlackBox
         public double ThrottleSec;
         public int Tdr;
         public string Tuning = "";
+        public DateTime LastThrottle = DateTime.MinValue;
+        public bool LastThrottleThermal;
+        public double ThermalThrottleSec;
+        public double BaseEff = double.NaN;   // FPS reali per watt nelle partite precedenti allo stesso gioco
+
+        // giudizio sullo undervolt/overclock in questa partita: 0 = ok, 1 = attenzione, 2 = problema
+        public string UvVerdict(out int level)
+        {
+            int min = (int)(LastFg - Start).TotalMinutes;
+            if (Tuning.StartsWith("RESET")) { level = 2; return "UV/OC perso: Adrenalin ha rimesso i valori di fabbrica"; }
+            if (Tdr > 0) { level = 2; return "UV/OC instabile: " + Tdr + " crash del driver in questa partita"; }
+            if (Crashes.Count > 0) { level = 2; return "il gioco è andato in crash: possibile UV/OC troppo spinto"; }
+            if (ThermalThrottleSec > 0) { level = 1; return "stabile, ma la scheda ha rallentato per il calore per " + Math.Round(ThermalThrottleSec) + " s"; }
+            level = 0;
+            if (ThrottleSec > 0) return "stabile da " + min + " min (qualche rallentamento per limite di potenza: normale con un undervolt)";
+            return "stabile da " + min + " min (nessun crash, nessun throttling)";
+        }
     }
 
     // Riconosce le sessioni di gioco e controlla la stabilita' (throttling, reset del tuning di Adrenalin).
@@ -68,6 +85,10 @@ namespace BlackBox
             }
             catch { }
         }
+
+        public bool InSession { get { var c = current; return c != null && c.ExitedAt == DateTime.MinValue; } }
+        public GameSession Current { get { return current; } }
+        public bool TuningPending { get { return tuneSince != DateTime.MinValue; } }
 
         // testo per la finestra: "Cyberpunk2077 da 12 min" oppure ""
         public string StatusText
@@ -138,6 +159,9 @@ namespace BlackBox
             try { c.Proc = Process.GetProcessById(c.Pid); } catch { }
             try { if (c.Proc != null) c.ExePath = c.Proc.MainModule.FileName; } catch { }
             c.Samples.AddRange(candSamples);
+            var prev = SessionLog.Read(dir).Where(x => string.Equals(x.Game, c.Game, StringComparison.OrdinalIgnoreCase) && !double.IsNaN(x.Eff))
+                                           .OrderByDescending(x => x.Start).Take(5).ToList();
+            if (prev.Count > 0) c.BaseEff = prev.Average(x => x.Eff);
             candSamples.Clear(); candPid = 0;
             loadClk.Clear(); typicalClk = double.NaN; thrRun = 0;
             current = c;
@@ -174,6 +198,7 @@ namespace BlackBox
             thrRun++;
             thrMinClk = Math.Min(thrMinClk, s.GpuClk);
             thrHot = MaxN(thrHot, s.GpuTempHot); thrPow = MaxN(thrPow, s.GpuPower);
+            if (thrRun >= ThrottleSecs) { c.LastThrottle = s.Time; c.LastThrottleThermal = !double.IsNaN(thrHot) && thrHot >= Limits.HotWarn; }
             if (thrRun == ThrottleSecs)
                 col.AddEvent("WARN", "Throttling GPU in " + c.Game + ": clock " + N0(thrMinClk) + " MHz invece dei soliti ~" + N0(typicalClk) +
                                      " MHz con GPU al " + N0(thrGpu) + "% (hotspot " + N0(thrHot) + " °C, " + N0(thrPow) + " W) — " + ThrottleCause());
@@ -184,6 +209,7 @@ namespace BlackBox
             if (thrRun >= ThrottleSecs)
             {
                 c.ThrottleSec += thrRun;
+                if (!double.IsNaN(thrHot) && thrHot >= Limits.HotWarn) c.ThermalThrottleSec += thrRun;
                 c.Throttles.Add(thrStart.ToString("HH:mm:ss") + "  " + thrRun + " s  clock " + N0(thrMinClk) + " MHz invece di ~" + N0(typicalClk) +
                                 " MHz, hotspot " + N0(thrHot) + " °C, " + N0(thrPow) + " W — " + ThrottleCause());
             }
@@ -192,7 +218,7 @@ namespace BlackBox
 
         string ThrottleCause()
         {
-            if (!double.IsNaN(thrHot) && thrHot >= 100) return "probabile limite termico";
+            if (!double.IsNaN(thrHot) && thrHot >= Limits.HotWarn) return "probabile limite termico";
             if (!double.IsNaN(thrPow) && !double.IsNaN(col.EverMaxPower) && thrPow >= 0.93 * col.EverMaxPower) return "probabile limite di potenza";
             return "causa non chiara (driver, limite di tensione o scena che cambia)";
         }
@@ -285,8 +311,10 @@ namespace BlackBox
             double edge = Max(all, x => x.GpuTempEdge), hot = Max(all, x => x.GpuTempHot);
             double dAvg = Avg(play, x => x.GpuTempHot - x.GpuTempEdge), dMax = Max(all, x => x.GpuTempHot - x.GpuTempEdge);
             double vram = Max(all, x => x.VramMb) / 1024.0;
-            double fps, fpsLow;
-            Fps.SessionStats(out fps, out fpsLow);
+            double fps, fpsLow, fpsReal, fgShare;
+            Fps.SessionStats(out fps, out fpsLow, out fpsReal, out fgShare);
+            double eff = !double.IsNaN(fpsReal) && pAvg > 20 ? fpsReal / pAvg : double.NaN;   // FPS reali per watt
+            bool fg = !double.IsNaN(fgShare) && fgShare > 0.2;
             try { Fps.Stop(); } catch { }
             string opti = all.Select(x => x.OptiScaler).LastOrDefault(x => !string.IsNullOrEmpty(x)) ?? "";
             if (load.Count < 30) clkMax = mvLoad = double.NaN;   // troppo poco carico per un confronto affidabile
@@ -309,13 +337,30 @@ namespace BlackBox
             Row(sb, "Tensione media", N0(mvAvg) + " mV" + (double.IsNaN(mvLoad) ? "" : "  (sotto carico pieno " + N0(mvLoad) + " mV)"));
             Row(sb, "Temperatura edge massima", N0(edge) + " °C");
             Row(sb, "Hotspot massimo", N0(hot) + " °C");
-            Row(sb, "Hotspot − edge medio / max", N0(dAvg) + " / " + N0(dMax) + " °C");
+            Row(sb, "Hotspot − edge medio / max", N0(dAvg) + " / " + N0(dMax) + " °C" + (double.IsNaN(Limits.TypicalDelta) ? "" : "  (tipico per la tua scheda " + N0(Limits.TypicalDelta) + " °C)"));
             double cpuT = Max(all, x => x.CpuTctl), cpuTAvg = Avg(play, x => x.CpuTctl);
             Row(sb, "CPU temperatura media / max", double.IsNaN(cpuT) ? "n/d (apri HWiNFO con la memoria condivisa)" : N0(cpuTAvg) + " / " + N0(cpuT) + " °C");
             Row(sb, "VRAM massima",double.IsNaN(vram) ? "n/d" : vram.ToString("0.0", CultureInfo.InvariantCulture) + " GB");
             sb.AppendLine();
             sb.AppendLine("--- FPS ---");
             Row(sb, "FPS medio / 1% low", double.IsNaN(fps) ? "n/d (" + (Fps.Status != "" ? Fps.Status : "nessun fotogramma letto") + ")" : N0(fps) + " / " + N0(fpsLow));
+            if (fg) Row(sb, "Generazione di fotogrammi", "attiva (" + N0(fgShare * 100) + "% della partita): FPS calcolati davvero " + N0(fpsReal));
+            else if (!double.IsNaN(fps)) Row(sb, "Generazione di fotogrammi", "non rilevata");
+            sb.AppendLine();
+            sb.AppendLine("--- Undervolt / overclock ---");
+            int uvLevel; string uv = c.UvVerdict(out uvLevel);
+            Row(sb, "Giudizio", (uvLevel == 0 ? "OK — " : uvLevel == 1 ? "ATTENZIONE — " : "PROBLEMA — ") + uv);
+            if (!double.IsNaN(eff))
+            {
+                string cmp = "";
+                if (!double.IsNaN(c.BaseEff) && c.BaseEff > 0)
+                {
+                    double d = (eff / c.BaseEff - 1) * 100;
+                    cmp = "  (" + (d >= 0 ? "+" : "") + N0(d) + "% rispetto alle tue partite precedenti a " + c.Game + ")";
+                }
+                Row(sb, "Efficienza", eff.ToString("0.00", CultureInfo.InvariantCulture) + " FPS reali per watt" + cmp);
+                sb.AppendLine("  (più è alta, meglio funziona l'undervolt: stessi FPS con meno watt. Confronta la stessa scena.)");
+            }
             sb.AppendLine();
             sb.AppendLine("--- Stabilità ---");
             if (c.Throttles.Count == 0) sb.AppendLine("  Throttling: nessuno");
@@ -331,11 +376,14 @@ namespace BlackBox
             if (c.Tuning != "") sb.AppendLine("  Tuning di Adrenalin: " + c.Tuning);
 
             var warn = new List<string>();
-            if (!double.IsNaN(dAvg) && dAvg > 25)
-                warn.Add("Differenza hotspot − edge alta (media " + N0(dAvg) + " °C, oltre 25): il dissipatore potrebbe non toccare bene il chip. Controlla pasta termica e montaggio.");
-            else if (!double.IsNaN(dMax) && dMax > 25)
-                warn.Add("Differenza hotspot − edge oltre 25 °C solo per brevi momenti (max " + N0(dMax) + " °C): da tenere d'occhio.");
-            if (c.ThrottleSec > 0) warn.Add("La scheda ha rallentato da sola (throttling) per " + Math.Round(c.ThrottleSec) + " s: vedi le cause sopra.");
+            // differenza hotspot-edge: confrontata con il valore tipico di questa scheda (impara partita dopo partita)
+            var full = all.Where(x => x.Gpu3d > 85 && !double.IsNaN(x.GpuTempHot) && !double.IsNaN(x.GpuTempEdge)).ToList();
+            double dLoad = full.Count >= 60 ? full.Average(x => x.GpuTempHot - x.GpuTempEdge) : double.NaN, typ = Limits.TypicalDelta;
+            double dWarn = Math.Max(32, double.IsNaN(typ) ? 0 : typ + 10);
+            if (!double.IsNaN(dLoad) && dLoad >= dWarn)
+                warn.Add("Differenza hotspot − edge alta sotto carico (media " + N0(dLoad) + " °C" + (double.IsNaN(typ) ? "" : ", di solito " + N0(typ)) + "): il dissipatore potrebbe non toccare bene il chip. Controlla pasta termica e montaggio.");
+            else Limits.LearnDelta(dLoad);   // partita normale: aggiorna il valore tipico
+            if (c.ThermalThrottleSec > 0) warn.Add("La scheda ha rallentato per il calore per " + Math.Round(c.ThermalThrottleSec) + " s: vedi le cause sopra.");
             if (c.Tdr > 0) warn.Add("Il driver video si è bloccato " + Volte(c.Tdr) + ": se hai UV/OC attivo è probabilmente troppo spinto.");
             if (c.Tuning.StartsWith("RESET")) warn.Add("Dopo il crash Adrenalin ha tolto lo UV/OC: rimettilo (o salvane uno più prudente) in Adrenalin → Prestazioni → Ottimizzazione.");
             if (warn.Count > 0) { sb.AppendLine(); sb.AppendLine("--- AVVISI ---"); foreach (var w in warn) sb.AppendLine("  " + w); }
@@ -350,7 +398,8 @@ namespace BlackBox
                 { "edge_max", F(edge, 0) }, { "hotspot_max", F(hot, 0) }, { "delta_hot_edge_max", F(dMax, 0) }, { "vram_max_gb", F(vram, 1) },
                 { "fps_medio", F(fps, 1) }, { "fps_1low", F(fpsLow, 1) }, { "throttling_s", F(c.ThrottleSec, 0) }, { "tdr", c.Tdr.ToString() },
                 { "crash_gioco", c.Crashes.Count.ToString() }, { "configurazione", c.Config }, { "optiscaler", opti }, { "fine_motivo", reason },
-                { "report", path == "" ? "" : name } });
+                { "report", path == "" ? "" : name }, { "fps_reali", F(fpsReal, 1) }, { "frame_gen", fg ? "si" : (double.IsNaN(fps) ? "" : "no") },
+                { "fps_per_watt", double.IsNaN(eff) ? "" : Math.Round(eff, 3).ToString(CultureInfo.InvariantCulture) } });
 
             col.AddEvent(c.Tdr > 0 || c.Crashes.Count > 0 ? "WARN" : "INFO", "Sessione di gioco finita: " + c.Game + " (" + Dur(c.End - c.Start) + ", " + reason + ")" +
                          (c.Tdr > 0 ? ", " + c.Tdr + " crash del driver" : "") + (c.Crashes.Count > 0 ? ", gioco andato in crash" : "") +
@@ -408,7 +457,7 @@ namespace BlackBox
     {
         public DateTime Start, End;
         public string Game = "", Config = "", Report = "";
-        public double ClkMax = double.NaN, MvLoad = double.NaN;
+        public double ClkMax = double.NaN, MvLoad = double.NaN, Eff = double.NaN;
         public int Tdr, Crash;
     }
 
@@ -420,7 +469,7 @@ namespace BlackBox
 
     public static class SessionLog
     {
-        public const string Header = "inizio;fine;gioco;durata_min;potenza_media_w;potenza_picco_w;clock_medio_mhz;clock_max_carico_mhz;mv_medio;mv_carico;edge_max;hotspot_max;delta_hot_edge_max;vram_max_gb;fps_medio;fps_1low;throttling_s;tdr;crash_gioco;configurazione;optiscaler;fine_motivo;report";
+        public const string Header = "inizio;fine;gioco;durata_min;potenza_media_w;potenza_picco_w;clock_medio_mhz;clock_max_carico_mhz;mv_medio;mv_carico;edge_max;hotspot_max;delta_hot_edge_max;vram_max_gb;fps_medio;fps_1low;throttling_s;tdr;crash_gioco;configurazione;optiscaler;fine_motivo;report;fps_reali;frame_gen;fps_per_watt";
 
         public static string FilePath(string dir) { return Path.Combine(dir, "sessioni.csv"); }
 
@@ -430,6 +479,8 @@ namespace BlackBox
             {
                 string f = FilePath(dir);
                 bool fresh = !File.Exists(f) || new FileInfo(f).Length == 0;
+                // file di una versione precedente: riscrivo l'intestazione con le colonne nuove (la lettura usa l'ultima)
+                if (!fresh && File.ReadLines(f).LastOrDefault(l => l.StartsWith("inizio;")) != Header) fresh = true;
                 using (var fs = new FileStream(f, FileMode.Append, FileAccess.Write, FileShare.ReadWrite, 4096, FileOptions.WriteThrough))
                 using (var w = new StreamWriter(fs, new UTF8Encoding(false)))
                 {
@@ -467,6 +518,7 @@ namespace BlackBox
                     double d; int n;
                     if (double.TryParse(g("clock_max_carico_mhz"), NumberStyles.Float, CultureInfo.InvariantCulture, out d)) r.ClkMax = d;
                     if (double.TryParse(g("mv_carico"), NumberStyles.Float, CultureInfo.InvariantCulture, out d)) r.MvLoad = d;
+                    if (double.TryParse(g("fps_per_watt"), NumberStyles.Float, CultureInfo.InvariantCulture, out d)) r.Eff = d;
                     if (int.TryParse(g("tdr"), out n)) r.Tdr = n;
                     if (int.TryParse(g("crash_gioco"), out n)) r.Crash = n;
                     res.Add(r);

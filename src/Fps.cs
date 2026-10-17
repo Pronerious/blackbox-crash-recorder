@@ -159,8 +159,13 @@ namespace BlackBox
         static Process pm;
         static int targetPid;
         static readonly object lk = new object();
-        // fotogrammi degli ultimi 60 s: (istante in ms dall'inizio della cattura, durata del fotogramma in ms)
-        static readonly Queue<KeyValuePair<double, double>> frames = new Queue<KeyValuePair<double, double>>();
+        // fotogrammi degli ultimi 60 s
+        struct Frame { public double T, Ft, Gpu; }   // istante (ms dall'inizio della cattura), durata, lavoro della GPU (ms)
+        static readonly Queue<Frame> frames = new Queue<Frame>();
+        // generazione di fotogrammi (FSR 3, DLSS FG via OptiScaler, XeFG): i fotogrammi generati costano pochissima GPU
+        // (es. 8 ms quelli veri, 1 ms quelli generati) e si alternano con quelli veri. Soglia aggiornata ogni secondo.
+        static long sessCounted; static double sessRealF, sessFgF; static int fgMiss;
+        public static volatile int FgFactor = 1;
         static double lastT = double.NaN; static DateTime lastLine = DateTime.MinValue;
         // statistiche dell'intera sessione: istogramma del frame time a passi di 0,1 ms (fino a 250 ms)
         static readonly long[] hist = new long[2501];
@@ -184,7 +189,7 @@ namespace BlackBox
             {
                 string p = Settings.Get("presentmon", "");
                 if (p != "" && File.Exists(p)) return p;
-                return Path.Combine(toolsDir, "PresentMon.exe");
+                return Path.Combine(toolsDir ?? "", "PresentMon.exe");
             }
         }
         public static bool ToolPresent { get { return File.Exists(ToolPath); } }
@@ -256,7 +261,7 @@ namespace BlackBox
             lock (lk)
             {
                 frames.Clear(); lastT = double.NaN; lastLine = DateTime.MinValue;
-                Array.Clear(hist, 0, hist.Length); sessFrames = 0; sessMs = 0;
+                Array.Clear(hist, 0, hist.Length); sessFrames = 0; sessMs = 0; sessCounted = 0; sessRealF = 0; sessFgF = 0; fgMiss = 0; FgFactor = 1;
                 chainCount.Clear(); mainChain = "";
                 Array.Clear(graph, 0, graph.Length); graphPos = 0;
             }
@@ -315,9 +320,12 @@ namespace BlackBox
                 string header = p.StandardOutput.ReadLine();
                 if (header == null) { if (!Denied) Status = "PresentMon si è chiuso subito"; return; }
                 var cols = header.Split(',');
-                int iFt = Array.IndexOf(cols, "FrameTime"), iT = Array.IndexOf(cols, "CPUStartTime"), iPid = Array.IndexOf(cols, "ProcessID"), iSc = Array.IndexOf(cols, "SwapChainAddress");
+                int iFt = Array.IndexOf(cols, "FrameTime"), iT = Array.IndexOf(cols, "CPUStartTime"), iPid = Array.IndexOf(cols, "ProcessID"), iSc = Array.IndexOf(cols, "SwapChainAddress"), iGpu = Array.IndexOf(cols, "GPUBusy");
+                if (iGpu < 0) iGpu = Array.IndexOf(cols, "MsGPUBusy");
                 double tScale = 1;
                 if (iFt < 0) iFt = Array.IndexOf(cols, "MsBetweenPresents");            // formato 1.x
+                if (iT < 0) iT = Array.IndexOf(cols, "CPUStartTimeInMs");
+                if (iT < 0) iT = Array.IndexOf(cols, "TimeInMs");
                 if (iT < 0) { iT = Array.IndexOf(cols, "TimeInSeconds"); tScale = 1000; }
                 if (iFt < 0 || iT < 0) { Status = "formato di PresentMon non riconosciuto"; return; }
                 int need = Math.Max(Math.Max(iFt, iT), Math.Max(iPid, iSc));
@@ -330,7 +338,9 @@ namespace BlackBox
                     double ft, t;
                     if (!double.TryParse(a[iFt], NumberStyles.Float, CultureInfo.InvariantCulture, out ft) ||
                         !double.TryParse(a[iT], NumberStyles.Float, CultureInfo.InvariantCulture, out t) || ft <= 0 || ft > 5000) continue;
-                    Add(t * tScale, ft, iSc >= 0 ? a[iSc] : "");
+                    double gpu;
+                    if (iGpu < 0 || iGpu >= a.Length || !double.TryParse(a[iGpu], NumberStyles.Float, CultureInfo.InvariantCulture, out gpu)) gpu = double.NaN;
+                    Add(t * tScale, ft, gpu, iSc >= 0 ? a[iSc] : "");
                 }
                 if (pm == p && !Denied) Status = "PresentMon si è fermato";
             }
@@ -338,15 +348,15 @@ namespace BlackBox
         }
 
         // solo la catena di presentazione con piu' fotogrammi (il gioco), non overlay o launcher dello stesso processo
-        static void Add(double t, double ft, string chain)
+        static void Add(double t, double ft, double gpu, string chain)
         {
             lock (lk)
             {
                 long c; chainCount.TryGetValue(chain, out c); chainCount[chain] = ++c;
                 if (mainChain == "" || (chain != mainChain && c > chainCount[mainChain] * 2)) mainChain = chain;
                 if (chain != mainChain) return;
-                frames.Enqueue(new KeyValuePair<double, double>(t, ft));
-                while (frames.Count > 0 && frames.Peek().Key < t - 60000) frames.Dequeue();
+                frames.Enqueue(new Frame { T = t, Ft = ft, Gpu = gpu });
+                while (frames.Count > 0 && frames.Peek().T < t - 60000) frames.Dequeue();
                 lastT = t; lastLine = DateTime.UtcNow;
                 hist[Math.Min(hist.Length - 1, (int)(ft * 10))]++;
                 sessFrames++; sessMs += ft;
@@ -356,34 +366,76 @@ namespace BlackBox
 
         // ------------------------------------------------ valori (chiamati ogni secondo dal registratore)
         // FPS degli ultimi 2 s, 1% low sugli ultimi 60 s, frame time medio degli ultimi 2 s. NaN se non ci sono dati freschi.
-        public static void Current(out double fps, out double low1, out double ftAvg)
+        public static void Current(out double fps, out double low1, out double ftAvg, out double realFps)
         {
-            fps = low1 = ftAvg = double.NaN;
+            fps = low1 = ftAvg = realFps = double.NaN;
             lock (lk)
             {
                 if (pm == null || frames.Count == 0 || (DateTime.UtcNow - lastLine).TotalSeconds > 3) return;
                 double from = lastT - 2000, sum = 0; int n = 0;
-                foreach (var f in frames) if (f.Key > from) { sum += f.Value; n++; }
+                var recent = frames.Where(f => f.T > from).ToList();
+                foreach (var f in recent) { sum += f.Ft; n++; }
                 if (n > 0) { fps = 1000.0 * n / sum; ftAvg = sum / n; }
-                var all = frames.Select(f => f.Value).OrderBy(v => v).ToList();
+                DetectFrameGen(recent);
+                CountSession();
+                realFps = FgFactor > 1 ? fps / FgFactor : fps;
+                var all = frames.Select(f => f.Ft).OrderBy(v => v).ToList();
                 if (all.Count >= 20) low1 = 1000.0 / all[(int)Math.Min(all.Count - 1, Math.Ceiling(all.Count * 0.99) - 1)];
                 graph[graphPos] = ftAvg; graphPos = (graphPos + 1) % graph.Length;
             }
         }
 
-        // FPS medio e 1% low dell'intera sessione
-        public static void SessionStats(out double fps, out double low1)
+        static void DetectFrameGen(List<Frame> recent)
         {
-            fps = low1 = double.NaN;
+            var g = recent.Where(f => !double.IsNaN(f.Gpu)).Select(f => f.Gpu).ToList();
+            if (g.Count < 30) { FgFactor = 1; return; }
+            var sorted = g.OrderBy(x => x).ToList();
+            double p75 = sorted[(int)(sorted.Count * 0.75)], thr = 0.35 * p75;
+            int light = 0, alternations = 0;
+            for (int i = 0; i < g.Count; i++)
+                if (g[i] < thr) { light++; if (i > 0 && g[i - 1] >= thr) alternations++; }
+            double frac = light / (double)g.Count;
+            // fotogrammi "leggeri" tra il 35% e l'80% e quasi sempre subito dopo uno "pesante": generazione attiva
+            if (p75 > 0.5 && frac >= 0.35 && frac <= 0.8 && alternations >= 0.6 * light)
+            { FgFactor = Math.Max(2, (int)Math.Round(1 / (1 - frac))); fgMiss = 0; }
+            else if (++fgMiss >= 3) FgFactor = 1;   // tolleranza: spenta solo dopo 3 secondi di fila senza il ritmo vero/generato
+        }
+
+        // i fotogrammi arrivati dall'ultimo secondo, divisi per il fattore di generazione del momento
+        static void CountSession()
+        {
+            long nf = sessFrames - sessCounted; sessCounted = sessFrames;
+            sessRealF += FgFactor > 1 ? nf / (double)FgFactor : nf;
+            if (FgFactor > 1) sessFgF += nf;
+        }
+
+        // FPS medio e 1% low dell'intera sessione; realFps = senza i fotogrammi generati; fgShare = quota di partita con generazione
+        public static void SessionStats(out double fps, out double low1, out double realFps, out double fgShare)
+        {
+            fps = low1 = realFps = fgShare = double.NaN;
             lock (lk)
             {
                 if (sessFrames < 20 || sessMs <= 0) return;
                 fps = 1000.0 * sessFrames / sessMs;
+                CountSession();
+                realFps = 1000.0 * sessRealF / sessMs;
+                fgShare = sessFgF / sessFrames;
                 long target = (long)Math.Ceiling(sessFrames * 0.99), acc = 0;
                 for (int i = 0; i < hist.Length; i++) { acc += hist[i]; if (acc >= target) { low1 = 1000.0 / ((i + 0.5) / 10.0); break; } }
             }
         }
 
         public static bool Running { get { return pm != null; } }
+
+        // durata degli ultimi n fotogrammi (per il grafico dell'overlay); vuoto se i dati non sono freschi
+        public static double[] RecentFrameTimes(int n)
+        {
+            lock (lk)
+            {
+                if (pm == null || frames.Count == 0 || (DateTime.UtcNow - lastLine).TotalSeconds > 3) return new double[0];
+                int skip = Math.Max(0, frames.Count - n);
+                return frames.Skip(skip).Select(f => f.Ft).ToArray();
+            }
+        }
     }
 }

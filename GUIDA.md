@@ -24,6 +24,9 @@ programma: pulsante **Guida** in alto, oppure tasto destro sull'icona → **Guid
 10. [Sessioni di gioco](#10-sessioni-di-gioco)
 11. [Temperatura della CPU (con HWiNFO)](#11-temperatura-della-cpu-con-hwinfo)
 12. [FPS e frame time (con PresentMon)](#12-fps-e-frame-time-con-presentmon)
+13. [Overlay in gioco](#13-overlay-in-gioco)
+14. [Controllo dello stato e UV/OC](#14-controllo-dello-stato-e-uvoc)
+15. [Il tuo PC: riconoscimento automatico](#15-il-tuo-pc-riconoscimento-automatico)
 
 ---
 
@@ -98,10 +101,21 @@ A volte alcuni pezzi di Windows restano bloccati in un ciclo: usano un core inte
 del processore, le ventole girano forte e la temperatura sale, anche se non stai
 facendo niente.
 
-BlackBox li controlla ogni 2 secondi. Se uno di questi resta sopra **metà di un
-core per più di 60 secondi di fila**, lo chiude. Windows lo riapre da solo, pulito,
-appena serve. Ricevi una notifica e lo trovi negli **Eventi** come
-*"Sbloccato …"*.
+BlackBox li controlla ogni 2 secondi e ne chiude uno **solo se è davvero bloccato**,
+cioè se valgono tutte queste condizioni:
+
+1. resta sopra **metà di un core per almeno 60 secondi**;
+2. il consumo è **piatto e costante**: un ciclo bloccato consuma sempre uguale,
+   mentre un lavoro vero va a scatti;
+3. **non lo stai usando**: se è in primo piano (per esempio hai il menu Start o la
+   ricerca aperti) non viene toccato;
+4. **non stai giocando**: durante una partita non chiude niente, segna il problema
+   e ricontrolla a fine partita;
+5. se lo stesso processo si riblocca **3 volte in un'ora**, smette di chiuderlo e ti
+   avvisa: vuol dire che c'è un problema di Windows da sistemare.
+
+Windows lo riapre da solo, pulito, appena serve. Ricevi una notifica e lo trovi negli
+**Eventi** come *"Sbloccato …"*.
 
 | Processo | Cos'è |
 |---|---|
@@ -115,7 +129,9 @@ appena serve. Ricevi una notifica e lo trovi negli **Eventi** come
 | LockApp | schermata di blocco |
 
 **Nessun altro programma viene mai chiuso**: giochi, browser, documenti aperti
-non vengono toccati. Al massimo, se in quel momento avevi aperto il pannello emoji
+non vengono toccati. Se un altro programma consuma almeno un core intero in
+background per più di 10 minuti, BlackBox lo **segnala soltanto** nel controllo dello
+stato: può essere un lavoro normale (antivirus, aggiornamenti), decidi tu. Al massimo, se in quel momento avevi aperto il pannello emoji
 o il menu Start, si chiude e lo riapri.
 
 Se nella lista eventi vedi lo stesso processo sbloccato molto spesso, è un bug di
@@ -130,6 +146,7 @@ Windows: installa gli aggiornamenti di Windows Update.
 | Tasto destro → Apri monitor | apre la finestra |
 | Tasto destro → Ultimo report | apre l'ultimo report di spegnimento |
 | Tasto destro → Ultima sessione di gioco | apre il report dell'ultima partita |
+| Tasto destro → Overlay in gioco | acceso/spento, posizione, dimensione del testo (punto 13) |
 | Tasto destro → Apri cartella log | apre la cartella dei dati |
 | Tasto destro → Guida | apre questa guida |
 | Tasto destro → Esci | ferma davvero BlackBox |
@@ -170,6 +187,11 @@ e controlla che la memoria condivisa sia accesa (punto 11).
 **Gli FPS restano a "--".** Gli FPS si misurano solo durante una sessione di gioco.
 Se il gioco è aperto da poco, aspetta 20 secondi. Se nella riga *FPS* c'è un pulsante,
 segui il punto 12.
+
+**L'overlay non si vede.** Controlla che sia acceso (pulsante *Overlay: ON* oppure
+Ctrl + Shift + O) e che ci sia una sessione di gioco in corso. Se il gioco è in
+**schermo intero esclusivo**, nelle opzioni video scegli **finestra senza bordi**
+(*borderless*): in schermo intero esclusivo nessun overlay esterno può apparire.
 
 **Non parte la sessione di gioco.** Parte solo se il gioco è in primo piano e usa la
 scheda video oltre il 60% per 20 secondi. Giochi molto leggeri (o con FPS bloccati
@@ -262,8 +284,102 @@ Da lì in poi, mentre giochi la riga *FPS* mostra:
 - **ms**: il tempo medio di un fotogramma (frame time).
 
 FPS medio e 1% low dell'intera partita finiscono nel report della sessione e in
-`sessioni.csv`. Con la generazione di fotogrammi (AFMF, Frame Generation) BlackBox
-conta i fotogrammi del gioco: Adrenalin può mostrare un numero più alto.
+`sessioni.csv`.
 
+**Generazione di fotogrammi (FSR 3, DLSS/XeSS Frame Generation).** BlackBox la
+riconosce da solo: i fotogrammi generati costano pochissimo lavoro alla scheda video
+e si alternano con quelli veri. Quando è attiva vedi per esempio
+`FPS 210  FG 2x → 105 reali`: 210 sono quelli che vedi, 105 quelli calcolati davvero
+(la reattività ai comandi segue questi). L'AFMF del driver (Adrenalin) invece non è
+visibile a nessun programma esterno: lì gli FPS mostrati restano quelli del gioco.
 Se preferisci usare un PresentMon che hai già, scrivi il percorso in
 `Documenti\BlackBox\impostazioni.ini` alla riga `presentmon=` (con BlackBox chiuso).
+
+## 13. Overlay in gioco
+
+Un piccolo riquadro sopra il gioco, per esempio:
+
+```
+FPS 210  FG 2x → 105 reali   1% low 94
+[grafico del frame time]   4,8 ms
+GPU 56°C  hot 81°C  263 W  2650 MHz  985 mV
+CPU 35%  72°C   RAM 61%   VRAM 9,8 GB
+✔ tutto ok   UV/OC stabile   0,42 FPS/W
+```
+
+- Il **grafico** mostra la durata degli ultimi 120 fotogrammi: una linea piatta è
+  fluida, i picchi verso l'alto sono gli scatti.
+- L'ultima riga è il **controllo dello stato** (punto 14).
+- I colori: verde va bene, arancione attenzione, rosso problema. Le soglie sono
+  quelle del **tuo** hardware (punto 15), non numeri generici.
+- Non si può cliccare e non ruba il mouse né la tastiera al gioco.
+
+**Accendere e spegnere:** tasto rapido **Ctrl + Shift + O**, anche in gioco, oppure
+il pulsante *Overlay* in alto nella finestra.
+
+**Personalizzarlo:** tasto destro sull'icona di BlackBox → **Overlay in gioco**:
+
+| Voce | Scelte |
+|---|---|
+| Forma | **Blocco** (più righe) o **Barra in lungo** (una riga sola, comoda in alto al centro) |
+| Posizione | i quattro angoli, oppure in alto o in basso al centro |
+| Dimensione del testo | piccolo, medio, grande, molto grande |
+| Colore del testo / del grafico | bianco, giallo, ciano, verde, arancione, rosa... |
+| Sfondo | scuro, semitrasparente, molto trasparente, nessuno |
+| Cosa mostrare | spunta le righe che vuoi: FPS, grafico, GPU, CPU, controllo stato |
+| Anteprima | lo fa vedere per 8 secondi anche senza giocare |
+
+Ogni modifica si vede subito per qualche secondo.
+
+**Perché pesa meno dell'overlay di Steam:** non entra dentro il gioco (nessuna DLL
+iniettata, quindi niente conflitti con gli anti-cheat). È una finestra a parte,
+disegnata dal processore e non dalla scheda video. Il gioco resta in *Independent
+Flip*, la modalità più veloce, senza latenza in più. Misurato: circa **0,15%** della
+CPU con l'overlay acceso.
+
+Il tasto rapido si può cambiare in `impostazioni.ini`, riga `overlay_tasto=`
+(per esempio `Ctrl+Alt+F10`), con BlackBox chiuso.
+
+**Limite:** nei giochi in *schermo intero esclusivo* l'overlay non appare; scegli
+*finestra senza bordi* (borderless) nelle opzioni video del gioco.
+
+## 14. Controllo dello stato e UV/OC
+
+Nella finestra, riga **Controllo stato** (e nell'ultima riga dell'overlay): **✔ tutto
+ok**, oppure cosa non va. Cliccala per l'elenco completo:
+
+- temperature della scheda video e della CPU (media degli ultimi 30 secondi, mai un
+  picco di un attimo);
+- **differenza hotspot − edge** confrontata con quella **tipica della tua scheda**,
+  che BlackBox impara partita dopo partita;
+- **undervolt/overclock**: *stabile* se non ci sono crash del driver, crash del gioco
+  o rallentamenti per il calore. I rallentamenti per limite di potenza sono normali
+  con un undervolt e non danno avvisi;
+- **efficienza in FPS per watt** (FPS reali divisi per i watt della scheda): è il
+  numero migliore per confrontare due undervolt. Più è alto, meglio è. Confronta
+  sempre la stessa scena dello stesso gioco. Il report dice di quanto sei sopra o
+  sotto le tue partite precedenti;
+- fluidità (1% low), memoria video e RAM: avvisano solo se il gioco scatta davvero;
+- programmi e impostazioni utili: HWiNFO, PresentMon, Modalità gioco, HAGS.
+
+Il simbolo ℹ è solo un'informazione, non un problema.
+
+## 15. Il tuo PC: riconoscimento automatico
+
+A ogni avvio BlackBox riconosce processore, scheda video, driver, Adrenalin e
+Windows, e sceglie i limiti giusti per quei modelli. Per esempio:
+
+| Componente | Limite usato |
+|---|---|
+| Radeon RX 5000/6000/7000/9000 | hotspot fino a 110 °C: attenzione da 100, problema da 107 |
+| NVIDIA | temperatura del chip: attenzione da 83, problema da 88 °C |
+| Ryzen 7000X3D (es. 7800X3D) | CPU fino a 89 °C |
+| Ryzen 7000/9000 | CPU fino a 95 °C (ci arrivano per progetto) |
+| Intel Core / Core Ultra | CPU fino a 100 / 105 °C |
+
+**Al primo avvio** mostra cosa ha riconosciuto e cosa conviene sistemare. Lo trovi
+sempre anche nel controllo dello stato, sotto *Il tuo PC*.
+
+Se **cambi scheda video**, i valori imparati ripartono da capo. Se **aggiorni il
+driver**, BlackBox controlla alla partita successiva se Adrenalin ha azzerato il tuo
+UV/OC (succede spesso).

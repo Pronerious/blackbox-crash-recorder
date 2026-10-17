@@ -60,6 +60,7 @@
       <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
         <Button x:Name="BtnReport" Content="Ultimo report"/>
         <Button x:Name="BtnLogs" Content="Apri cartella log"/>
+        <Button x:Name="BtnOverlay" Content="Overlay"/>
         <Button x:Name="BtnAuto" Content="Avvio automatico: OFF"/>
         <Button x:Name="BtnGuide" Content="Guida"/>
         <Button x:Name="BtnTray" Content="Nascondi nella barra"/>
@@ -105,8 +106,8 @@
             <TextBlock Grid.Row="1" Grid.Column="1" x:Name="ActCpu" Margin="0,2" TextTrimming="CharacterEllipsis"/>
             <TextBlock Grid.Row="2" Foreground="#8A91A0" Text="Più GPU" Margin="0,2"/>
             <TextBlock Grid.Row="2" Grid.Column="1" x:Name="ActGpu" Margin="0,2" TextTrimming="CharacterEllipsis"/>
-            <TextBlock Grid.Row="3" Foreground="#8A91A0" Text="Massimi sessione" Margin="0,2"/>
-            <TextBlock Grid.Row="3" Grid.Column="1" x:Name="ActMax" Margin="0,2" TextWrapping="Wrap"/>
+            <TextBlock Grid.Row="3" Foreground="#8A91A0" Text="Controllo stato" Margin="0,2"/>
+            <TextBlock Grid.Row="3" Grid.Column="1" x:Name="ActMax" Margin="0,2" TextTrimming="CharacterEllipsis" Cursor="Hand" TextDecorations="Underline" ToolTip="Clicca per il controllo completo"/>
             <TextBlock Grid.Row="4" Foreground="#8A91A0" Text="Sessione di gioco" Margin="0,2"/>
             <TextBlock Grid.Row="4" Grid.Column="1" x:Name="ActGame" Margin="0,2" TextTrimming="CharacterEllipsis"/>
             <TextBlock Grid.Row="5" Foreground="#8A91A0" Text="FPS" Margin="0,2" VerticalAlignment="Center"/>

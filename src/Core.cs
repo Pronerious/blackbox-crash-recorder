@@ -27,7 +27,8 @@ namespace BlackBox
         public double TopCpuPct = double.NaN, TopGpuPct = double.NaN;
         public string Note = "";
         // colonne aggiunte in coda al CSV dalla versione 1.2 (vuote finche' la fonte non e' disponibile)
-        public double Fps = double.NaN, Fps1Low = double.NaN, FrameTimeMs = double.NaN, CpuTctl = double.NaN;
+        public double Fps = double.NaN, Fps1Low = double.NaN, FrameTimeMs = double.NaN, CpuTctl = double.NaN, FpsReal = double.NaN;
+        public int FgFactor = 1;   // 2 = generazione di fotogrammi 2x, ecc.
         public string OptiScaler = "";
         // solo in memoria: processo in primo piano e suo uso della GPU 3D (per le sessioni di gioco)
         public int ForegroundPid;
@@ -231,7 +232,7 @@ namespace BlackBox
         public string GpuVendor { get { return GpuSensors.Vendor; } }
         public double EverMaxPower = double.NaN;   // massima potenza GPU mai vista su questo PC (per soglie relative)
         public CrashInfo LastCrash;
-        public volatile bool CrashAnalysisDone;
+        public volatile bool CrashAnalysisDone, HardwareReady;
         public double SessionMaxPower = double.NaN, SessionMaxHot = double.NaN, SessionMaxEdge = double.NaN;
         public DateTime StartedAt = DateTime.Now;
 
@@ -247,7 +248,7 @@ namespace BlackBox
         readonly object evLock = new object();
         string pendingNote = "";
 
-        public const string Header = "timestamp;cpu_util;cpu_core_max;cpu_perf_pct;cpu_mhz;ram_commit_pct;ram_free_mb;gpu_3d_pct;gpu_act_pct;gpu_mem_act_pct;gpu_power_w;gpu_power_peak_w;gpu_clk_mhz;gpu_clk_peak_mhz;gpu_mem_clk_mhz;gpu_vddc_mv;gpu_temp_edge;gpu_temp_hotspot;gpu_temp_mem;gpu_fan_rpm;gpu_fan_pct;vram_mb;acpi_temp;app_primo_piano;top_cpu_proc;top_cpu_pct;top_gpu_proc;top_gpu_pct;note;fps;fps_1low;frametime_ms;cpu_tctl;optiscaler";
+        public const string Header = "timestamp;cpu_util;cpu_core_max;cpu_perf_pct;cpu_mhz;ram_commit_pct;ram_free_mb;gpu_3d_pct;gpu_act_pct;gpu_mem_act_pct;gpu_power_w;gpu_power_peak_w;gpu_clk_mhz;gpu_clk_peak_mhz;gpu_mem_clk_mhz;gpu_vddc_mv;gpu_temp_edge;gpu_temp_hotspot;gpu_temp_mem;gpu_fan_rpm;gpu_fan_pct;vram_mb;acpi_temp;app_primo_piano;top_cpu_proc;top_cpu_pct;top_gpu_proc;top_gpu_pct;note;fps;fps_1low;frametime_ms;cpu_tctl;optiscaler;fps_reali;frame_gen";
 
         public GameTracker Games;
 
@@ -335,6 +336,16 @@ namespace BlackBox
             EverMaxPower = Analyzer.ReadMaxPower(LogDir);
             GpuSensors.Init();
             CpuTemp.Start();
+            try
+            {
+                Hardware.Detect();
+                if (Hardware.ResetMaxPower) { EverMaxPower = double.NaN; try { File.Delete(Analyzer.MaxPowerFile(LogDir)); } catch { } }
+                foreach (var ch in Hardware.Changes) AddEvent("WARN", ch);
+                if (Hardware.DriverChanged) Games.MarkTuningCheck(DateTime.Now, "l'aggiornamento del driver video");
+                AddEvent("INFO", (Hardware.FirstRun ? "Primo avvio, PC riconosciuto: " : "PC: ") + Hardware.Cpu + " · " + Hardware.Gpu + " · driver " + Hardware.GpuDriver);
+            }
+            catch (Exception ex) { AddEvent("WARN", "Riconoscimento del PC non riuscito: " + ex.Message); }
+            HardwareReady = true;
             AddEvent("INFO", "BlackBox avviato" + (GpuSensors.Ok ? " (sensori GPU " + GpuSensors.Vendor + " attivi)" : " (sensori GPU non disponibili: supportate schede AMD e NVIDIA)"));
             pendingNote = "avvio monitor";
 
@@ -484,7 +495,8 @@ namespace BlackBox
 
             s.TopCpuProc = topCpu.Key; s.TopCpuPct = topCpu.Value;
             s.CpuTctl = CpuTemp.Value;
-            Fps.Current(out s.Fps, out s.Fps1Low, out s.FrameTimeMs);
+            Fps.Current(out s.Fps, out s.Fps1Low, out s.FrameTimeMs, out s.FpsReal);
+            s.FgFactor = double.IsNaN(s.Fps) ? 1 : Fps.FgFactor;
             try { s.Foreground = fgPid != 0 ? NameOf((int)fgPid) : ""; } catch { }
 
             lock (evLock) { s.Note = pendingNote; pendingNote = ""; }
@@ -502,6 +514,10 @@ namespace BlackBox
             double dt = (now - prevCpuAt).TotalMilliseconds;
             string bestName = ""; double best = 0;
             var cur = new Dictionary<int, TimeSpan>();
+            uint fgPid = 0;
+            try { Native.GetWindowThreadProcessId(Native.GetForegroundWindow(), out fgPid); } catch { }
+            var game = Games.Current;
+            int gamePid = game != null ? game.Pid : 0;
             foreach (var p in Process.GetProcesses())
             {
                 try
@@ -514,15 +530,22 @@ namespace BlackBox
                     {
                         double pct = (t - old).TotalMilliseconds / dt / Environment.ProcessorCount * 100.0;
                         if (pct > best) { best = pct; bestName = p.ProcessName; }
-                        if (Stuckable.Contains(p.ProcessName)) CheckStuck(p, pct * Environment.ProcessorCount);
+                        double core = pct * Environment.ProcessorCount;   // % di UN core
+                        if (p.Id == fgPid) lastFgAt[p.Id] = now;
+                        if (Stuckable.Contains(p.ProcessName)) CheckStuck(p, core);
+                        else if (p.Id != fgPid && p.Id != gamePid) CheckHog(p, core);
                     }
                 }
                 catch { }
                 finally { p.Dispose(); }
             }
             prevCpu.Clear(); foreach (var kv in cur) prevCpu[kv.Key] = kv.Value;
-            foreach (var pid in stuckSince.Keys.Where(k => !cur.ContainsKey(k)).ToList()) stuckSince.Remove(pid);
+            foreach (var pid in stuckHist.Keys.Where(k => !cur.ContainsKey(k)).ToList()) stuckHist.Remove(pid);
+            foreach (var pid in hogs.Keys.Where(k => !cur.ContainsKey(k)).ToList()) hogs.Remove(pid);
+            foreach (var pid in lastFgAt.Keys.Where(k => !cur.ContainsKey(k)).ToList()) lastFgAt.Remove(pid);
             stuckFailed.RemoveWhere(k => !cur.ContainsKey(k));
+            var hl = hogs.Values.Where(x => (DateTime.Now - x.Since).TotalMinutes >= 10).OrderByDescending(x => x.Sum / x.N).ToList();
+            BackgroundHogs = string.Join(", ", hl.Take(3).Select(x => x.Name + " (" + Math.Round(x.Sum / x.N / 100.0, 1).ToString(CultureInfo.InvariantCulture) + " core da " + (int)(DateTime.Now - x.Since).TotalMinutes + " min)"));
             prevCpuAt = now;
             return new KeyValuePair<string, double>(bestName, bestName == "" ? double.NaN : Math.Min(100, best));
         }
@@ -541,26 +564,85 @@ namespace BlackBox
         static readonly HashSet<string> Stuckable = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
             "TextInputHost", "SearchHost", "StartMenuExperienceHost", "ShellExperienceHost",
             "CrossDeviceResume", "Widgets", "WidgetService", "PhoneExperienceHost", "LockApp" };
+        // Regole di prudenza: si chiude SOLO un vero blocco, mai un lavoro normale e mai mentre giochi.
+        //  1) oltre meta' core in almeno il 90% dei controlli degli ultimi 60 s (controllo ogni 2 s);
+        //  2) consumo PIATTO (un ciclo bloccato consuma sempre uguale; un lavoro vero va a scatti);
+        //  3) non in primo piano da almeno 60 s (se lo stai usando, es. menu Start aperto, non si tocca);
+        //  4) mai durante una sessione di gioco: si rimanda alla fine della partita;
+        //  5) al massimo 3 chiusure all'ora per processo: se si riblocca sempre, avvisa e smette.
         const double StuckCorePct = 50;     // % di UN core
-        const double StuckSeconds = 60;     // per quanto tempo di fila
-        readonly Dictionary<int, DateTime> stuckSince = new Dictionary<int, DateTime>();
+        const int StuckChecks = 30;         // 30 controlli ogni 2 s = 60 s
+        readonly Dictionary<int, List<double>> stuckHist = new Dictionary<int, List<double>>();
+        readonly Dictionary<int, DateTime> lastFgAt = new Dictionary<int, DateTime>();
+        readonly Dictionary<string, List<DateTime>> kills = new Dictionary<string, List<DateTime>>(StringComparer.OrdinalIgnoreCase);
+        readonly Dictionary<string, DateTime> stuckNotified = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         readonly HashSet<int> stuckFailed = new HashSet<int>();   // non chiudibili: non riprovare
+
+        static bool Flat(List<double> v)
+        {
+            double m = v.Average();
+            if (m <= 0) return false;
+            double sd = Math.Sqrt(v.Sum(x => (x - m) * (x - m)) / v.Count);
+            return sd / m < 0.3;
+        }
+
+        void NotifyOnce(string name, string level, string text, int minutes)
+        {
+            DateTime last;
+            if (stuckNotified.TryGetValue(name + level, out last) && (DateTime.Now - last).TotalMinutes < minutes) return;
+            stuckNotified[name + level] = DateTime.Now;
+            AddEvent(level, text);
+        }
 
         void CheckStuck(Process p, double corePct)
         {
-            if (corePct < StuckCorePct || stuckFailed.Contains(p.Id)) { stuckSince.Remove(p.Id); return; }
-            DateTime from;
-            if (!stuckSince.TryGetValue(p.Id, out from)) { stuckSince[p.Id] = DateTime.Now; return; }
-            if ((DateTime.Now - from).TotalSeconds < StuckSeconds) return;
-            stuckSince.Remove(p.Id);
+            if (stuckFailed.Contains(p.Id)) return;
+            List<double> h;
+            if (!stuckHist.TryGetValue(p.Id, out h)) stuckHist[p.Id] = h = new List<double>();
+            h.Add(corePct);
+            if (h.Count > StuckChecks) h.RemoveAt(0);
+            if (h.Count < StuckChecks) return;
+            if (h.Count(x => x >= StuckCorePct) < StuckChecks * 0.9 || !Flat(h)) return;    // lavoro vero o picco passeggero
+            DateTime fg;
+            if (lastFgAt.TryGetValue(p.Id, out fg) && (DateTime.Now - fg).TotalSeconds < 60) return;   // lo stai usando
+            string name = p.ProcessName; double avg = h.Average();
+            if (Games.InSession)
+            {
+                NotifyOnce(name, "INFO", name + " sembra bloccato (" + Math.Round(avg) + "% di un core, costante): non lo tocco mentre giochi, ricontrollo a fine partita.", 30);
+                return;
+            }
+            List<DateTime> k;
+            if (!kills.TryGetValue(name, out k)) kills[name] = k = new List<DateTime>();
+            k.RemoveAll(x => (DateTime.Now - x).TotalMinutes > 60);
+            if (k.Count >= 3)
+            {
+                NotifyOnce(name, "WARN", name + " si riblocca di continuo (3 volte nell'ultima ora): non lo chiudo più. Probabile problema di Windows: riavvia il PC e installa gli aggiornamenti.", 60);
+                return;
+            }
+            h.Clear();
             try
             {
                 p.Kill();
-                AddEvent("WARN", "Sbloccato " + p.ProcessName + ": era bloccato al " + Math.Round(corePct) + "% di un core da oltre " + StuckSeconds + " s. Chiuso, Windows lo riapre da solo.");
+                k.Add(DateTime.Now);
+                AddEvent("WARN", "Sbloccato " + name + ": era bloccato al " + Math.Round(avg) + "% di un core, costante, da oltre 60 s e non lo stavi usando. Chiuso, Windows lo riapre da solo.");
             }
-            catch (Exception ex) { stuckFailed.Add(p.Id); AddEvent("WARN", p.ProcessName + " bloccato al " + Math.Round(corePct) + "% ma non chiudibile: " + ex.Message); }
+            catch (Exception ex) { stuckFailed.Add(p.Id); AddEvent("WARN", name + " bloccato al " + Math.Round(avg) + "% ma non chiudibile: " + ex.Message); }
         }
 
+        // ------------------------------------------------ Programmi che consumano tanto in background (SOLO segnalati, mai chiusi)
+        // almeno un core intero, costante, per 10 minuti, non in primo piano e non il gioco
+        public class Hog { public string Name; public DateTime Since; public double Sum; public int N, High; }
+        readonly Dictionary<int, Hog> hogs = new Dictionary<int, Hog>();
+        public volatile string BackgroundHogs = "";
+
+        void CheckHog(Process p, double corePct)
+        {
+            Hog g;
+            if (corePct < 90) { hogs.Remove(p.Id); return; }
+            if (!hogs.TryGetValue(p.Id, out g)) hogs[p.Id] = g = new Hog { Name = p.ProcessName, Since = DateTime.Now };
+            g.Sum += corePct; g.N++; g.High++;
+
+        }
         // ------------------------------------------------ CSV (scrittura diretta su disco)
         static string F(double v, int dec)
         {
@@ -594,7 +676,7 @@ namespace BlackBox
                         F(s.GpuClk,0), F(s.GpuClkMax,0), F(s.GpuMemClk,0), F(s.GpuVddc,0),
                         F(s.GpuTempEdge,0), F(s.GpuTempHot,0), F(s.GpuTempMem,0), F(s.GpuFanRpm,0), F(s.GpuFanPct,0),
                         F(s.VramMb,0), F(s.ThermalC,1), S(s.Foreground), S(s.TopCpuProc), F(s.TopCpuPct,1), S(s.TopGpuProc), F(s.TopGpuPct,1), S(s.Note),
-                        F(s.Fps,1), F(s.Fps1Low,1), F(s.FrameTimeMs,2), F(s.CpuTctl,1), S(s.OptiScaler) }));
+                        F(s.Fps,1), F(s.Fps1Low,1), F(s.FrameTimeMs,2), F(s.CpuTctl,1), S(s.OptiScaler), F(s.FpsReal,1), double.IsNaN(s.Fps) ? "" : s.FgFactor.ToString() }));
                 }
                 catch { }
             }
@@ -904,8 +986,8 @@ namespace BlackBox
                 o.Add("Sospetti: undervolt CPU (Curve Optimizer AMD / offset Intel) o profilo RAM (EXPO/XMP) instabili nei cambi di stato di alimentazione; BIOS non aggiornato.");
                 return o;
             }
-            if (!double.IsNaN(hot) && hot >= 105) { o[0] = "SURRISCALDAMENTO GPU"; o.Add("Hotspot GPU a " + f0(hot) + " °C: protezione termica. Controlla ventole/pasta termica."); return o; }
-            if (!double.IsNaN(edge) && edge >= 90) { o[0] = "SURRISCALDAMENTO GPU"; o.Add("Temperatura GPU a " + f0(edge) + " °C: protezione termica. Controlla ventole/pasta termica."); return o; }
+            if (!double.IsNaN(hot) && hot >= Limits.HotMax - 2) { o[0] = "SURRISCALDAMENTO GPU"; o.Add("Hotspot GPU a " + f0(hot) + " °C: protezione termica. Controlla ventole/pasta termica."); return o; }
+            if (!double.IsNaN(edge) && edge >= Limits.EdgeBad) { o[0] = "SURRISCALDAMENTO GPU"; o.Add("Temperatura GPU a " + f0(edge) + " °C: protezione termica. Controlla ventole/pasta termica."); return o; }
 
             // potenza "alta" = vicina al massimo mai visto su questa scheda (minimo 100 W per avere un riferimento sensato)
             double refMax = !double.IsNaN(everMaxPower) && everMaxPower >= 100 ? everMaxPower : double.NaN;

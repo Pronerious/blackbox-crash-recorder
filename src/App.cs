@@ -125,6 +125,7 @@ namespace BlackBox
             col.Start();
             F<TextBlock>("SubTitle").Text = "Registrazione su disco ogni secondo  •  100% locale, internet solo per i download che avvii tu  •  " + logDir;
 
+            if (snapshot == null) overlay = new Overlay(col);
             LoadPastEvents();
             WireButtons();
             UpdateAutoBtn();
@@ -144,6 +145,8 @@ namespace BlackBox
             menu.Items.Add("Ultima sessione di gioco", null, (s, e) => OpenLastSession());
             menu.Items.Add("Apri cartella log", null, (s, e) => OpenLogs());
             menu.Items.Add("Guida", null, (s, e) => OpenGuide());
+            menu.Items.Add(new WF.ToolStripSeparator());
+            if (overlay != null) menu.Items.Add(OverlayMenu());
             menu.Items.Add(new WF.ToolStripSeparator());
             menu.Items.Add("Esci (interrompe la registrazione)", null, (s, e) => Exit());
             tray.ContextMenuStrip = menu;
@@ -185,11 +188,78 @@ namespace BlackBox
             }
         }
 
+        // ------------------------------------------------------------ overlay
+        Overlay overlay;
+
+        WF.ToolStripMenuItem OverlayMenu()
+        {
+            var root = new WF.ToolStripMenuItem("Overlay in gioco");
+            var on = new WF.ToolStripMenuItem("Attivo");
+            on.Click += (s, e) => overlay.SetEnabled(!overlay.Enabled);
+            var always = new WF.ToolStripMenuItem("Mostra anche fuori dai giochi");
+            always.Click += (s, e) => overlay.SetAlways(!Overlay.Always);
+            var preview = new WF.ToolStripMenuItem("Anteprima (8 secondi)");
+            preview.Click += (s, e) => overlay.Preview();
+            var checks = new List<Action>();
+            Func<string, string[][], Func<string>, Action<string>, WF.ToolStripMenuItem> choice = (title, list, cur, set) =>
+            {
+                var m = new WF.ToolStripMenuItem(title);
+                foreach (var x in list)
+                {
+                    string v = x[1]; var it = new WF.ToolStripMenuItem(x[0]);
+                    it.Click += (s, e) => set(v);
+                    checks.Add(() => it.Checked = cur() == v);
+                    m.DropDownItems.Add(it);
+                }
+                return m;
+            };
+            var parts = new WF.ToolStripMenuItem("Cosa mostrare");
+            foreach (var x in Overlay.Parts)
+            {
+                string v = x[1]; var it = new WF.ToolStripMenuItem(x[0]);
+                it.Click += (s, e) => overlay.TogglePart(v);
+                checks.Add(() => it.Checked = Overlay.Shows(v));
+                parts.DropDownItems.Add(it);
+            }
+            root.DropDownItems.Add(on);
+            root.DropDownItems.Add(always);
+            root.DropDownItems.Add(preview);
+            root.DropDownItems.Add(new WF.ToolStripSeparator());
+            root.DropDownItems.Add(choice("Forma", Overlay.Shapes, () => Overlay.Shape, overlay.SetShape));
+            root.DropDownItems.Add(choice("Posizione", Overlay.Positions, () => Overlay.Corner, overlay.SetCorner));
+            root.DropDownItems.Add(choice("Dimensione del testo", Overlay.Sizes, () => Overlay.FontSize.ToString(CultureInfo.InvariantCulture), overlay.SetFontSize));
+            root.DropDownItems.Add(choice("Colore del testo", Overlay.TextColors, () => Overlay.TextColor, overlay.SetTextColor));
+            root.DropDownItems.Add(choice("Colore del grafico", Overlay.GraphColors, () => Overlay.GraphColor, overlay.SetGraphColor));
+            root.DropDownItems.Add(choice("Sfondo", Overlay.Backgrounds, () => Overlay.Background, overlay.SetBackground));
+            root.DropDownItems.Add(parts);
+            root.DropDownOpening += (s, e) =>
+            {
+                on.Checked = overlay.Enabled; on.Text = "Attivo   (" + overlay.HotkeyText + ")";
+                always.Checked = Overlay.Always;
+                foreach (var c in checks) c();
+            };
+            foreach (WF.ToolStripItem it in root.DropDownItems)
+            {
+                var mi = it as WF.ToolStripMenuItem;
+                if (mi != null && mi.DropDownItems.Count > 0) mi.DropDownOpening += (s, e) => { foreach (var c in checks) c(); };
+            }
+            overlay.Changed += UpdateOverlayBtn;
+            return root;
+        }
+        void UpdateOverlayBtn()
+        {
+            var b = F<Button>("BtnOverlay");
+            if (overlay == null) { b.Visibility = Visibility.Collapsed; return; }
+            b.Content = "Overlay: " + (overlay.Enabled ? "ON" : "OFF");
+            b.ToolTip = "Overlay in gioco. Tasto rapido " + overlay.HotkeyText + ". Posizione e dimensione: tasto destro sull'icona di BlackBox → Overlay in gioco.";
+        }
+
         void Exit()
         {
             exiting = true;
             timer.Stop();
             col.Stop("BlackBox chiuso dall'utente");
+            if (overlay != null) overlay.Dispose();
             tray.Visible = false;
             tray.Dispose();
             app.Shutdown();
@@ -422,6 +492,9 @@ namespace BlackBox
         {
             F<Button>("BtnReport").Click += (s, e) => OpenLastReport();
             F<Button>("BtnFps").Click += (s, e) => OnFpsButton();
+            F<TextBlock>("ActMax").MouseLeftButtonUp += (s, e) => ShowHealth();
+            F<Button>("BtnOverlay").Click += (s, e) => { if (overlay != null) overlay.SetEnabled(!overlay.Enabled); };
+            UpdateOverlayBtn();
             F<Button>("BtnLogs").Click += (s, e) => OpenLogs();
             F<Button>("BtnGuide").Click += (s, e) => OpenGuide();
             F<Button>("BtnTray").Click += (s, e) => HideToTray();
@@ -468,6 +541,13 @@ namespace BlackBox
                     UpdateHistory();
                 }
 
+                // benvenuto del primo avvio: mai sopra un gioco (aspetta che la GPU sia libera da 10 s)
+                if (!welcomeShown && col.HardwareReady && snapshot == null && !col.Games.InSession && tick > 12 &&
+                    col.GetHistory(10).All(x => double.IsNaN(x.Fg3d) || x.Fg3d < 30))
+                {
+                    welcomeShown = true;
+                    if (Hardware.FirstRun) ShowWelcome();
+                }
                 EventLine ev;
                 while (col.NewEvents.TryDequeue(out ev)) AddEventRow(ev);
 
@@ -483,7 +563,7 @@ namespace BlackBox
                 tiles["cpu"].Value.Text = Fmt(s.CpuUtil);
                 tiles["cpu"].Sub.Text = "core più carico " + Fmt(s.CpuCoreMax) + "% · " +
                     (double.IsNaN(s.CpuTctl) ? "temperatura n/d — apri HWiNFO con memoria condivisa" : Fmt(s.CpuTctl) + " °C (" + CpuTemp.Source + ")");
-                tiles["cpu"].Value.Foreground = s.CpuTctl >= 90 ? Red : s.CpuTctl >= 80 ? Orange : Text;
+                tiles["cpu"].Value.Foreground = s.CpuTctl >= Limits.CpuMax ? Red : s.CpuTctl >= Limits.CpuMax - 4 ? Orange : Text;
                 tiles["mhz"].Value.Text = Fmt(s.CpuMhz);
                 tiles["mhz"].Sub.Text = "prestazioni " + Fmt(s.CpuPerf) + "% del clock base";
                 tiles["gpu"].Value.Text = Fmt(s.Gpu3d);
@@ -495,7 +575,7 @@ namespace BlackBox
                 if (col.GpuVendor == "") tiles["pow"].Sub.Text = "sensori GPU non disponibili (supportate AMD e NVIDIA)";
                 tiles["temp"].Value.Text = Fmt(s.GpuTempEdge);
                 tiles["temp"].Sub.Text = "hotspot " + Fmt(s.GpuTempHot) + "° · memoria " + Fmt(s.GpuTempMem) + "° · max " + Fmt(col.SessionMaxHot) + "°";
-                tiles["temp"].Value.Foreground = s.GpuTempHot >= 100 ? Red : s.GpuTempHot >= 90 ? Orange : Text;
+                tiles["temp"].Value.Foreground = s.GpuTempHot >= Limits.HotBad ? Red : s.GpuTempHot >= Limits.HotWarn ? Orange : Text;
                 tiles["clk"].Value.Text = Fmt(s.GpuClk);
                 tiles["clk"].Sub.Text = Fmt(s.GpuVddc) + " mV · ventola " + Fmt(s.GpuFanRpm) + " rpm (" + Fmt(s.GpuFanPct) + "%)";
                 tiles["ram"].Value.Text = Fmt(s.RamCommit);
@@ -519,8 +599,13 @@ namespace BlackBox
                 F<TextBlock>("ActGame").Text = game != "" ? game : "nessuna (parte da sola quando giochi)";
                 F<TextBlock>("ActGame").Foreground = game != "" ? Green : Muted;
                 UpdateFps(s);
-                F<TextBlock>("ActMax").Text ="GPU " + Fmt(col.SessionMaxPower) + " W · hotspot " + Fmt(col.SessionMaxHot) + " °C · in registrazione da " + (int)(DateTime.Now - col.StartedAt).TotalMinutes + " min";
-
+                if (tick % 2 == 0)
+                {
+                    int lv; string sum = Health.Summary(Health.Check(col), out lv);
+                    var am = F<TextBlock>("ActMax");
+                    am.Text = (lv >= 2 ? "✖ " : lv == 1 ? "⚠ " : "✔ ") + sum;
+                    am.Foreground = lv >= 2 ? Red : lv == 1 ? Orange : Green;
+                }
                 F<Ellipse>("RecDot").Opacity = tick % 2 == 1 ? 1 : 0.35;
                 if (tick % 60 == 0) UpdateConfig();
 
@@ -603,6 +688,44 @@ namespace BlackBox
             }) { IsBackground = true }.Start();
         }
 
+        bool welcomeShown;
+
+        // primo avvio: cosa ha riconosciuto BlackBox e cosa conviene fare
+        void ShowWelcome()
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("Benvenuto! BlackBox ha riconosciuto il tuo PC e ha scelto le soglie giuste per questi componenti:");
+            sb.AppendLine();
+            sb.AppendLine(Hardware.Describe());
+            sb.AppendLine();
+            sb.AppendLine("Programmi e impostazioni:");
+            foreach (var it in Hardware.Software()) sb.AppendLine((it.Level == 0 ? "✔  " : "ℹ  ") + it.Text);
+            sb.AppendLine();
+            sb.AppendLine("Da ora registra tutto da solo. Quando giochi parte la sessione di gioco con FPS, overlay (Ctrl+Shift+O) e controllo dello stato.");
+            sb.AppendLine("Se cambi scheda video o aggiorni il driver, BlackBox se ne accorge e si adatta. La guida completa è nel pulsante Guida.");
+            ShowWindow();
+            MessageBox.Show(sb.ToString(), "BlackBox — il tuo PC", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        void ShowHealth()
+        {
+            var items = Health.Check(col);
+            int lv; string sum = Health.Summary(items, out lv);
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine(lv >= 2 ? "C'È UN PROBLEMA: " + sum : lv == 1 ? "ATTENZIONE: " + sum : "TUTTO OK");
+            sb.AppendLine();
+            foreach (var it in items.OrderByDescending(x => x.Level))
+                sb.AppendLine((it.Level >= 2 ? "✖  " : it.Level == 1 ? "⚠  " : it.Level == 0 ? "✔  " : "ℹ  ") + it.Text);
+            sb.AppendLine();
+            sb.AppendLine("PROGRAMMI E IMPOSTAZIONI");
+            foreach (var it in Hardware.Software()) sb.AppendLine((it.Level == 0 ? "✔  " : "ℹ  ") + it.Text);
+            sb.AppendLine();
+            sb.AppendLine("IL TUO PC");
+            sb.AppendLine(Hardware.Describe());
+            sb.AppendLine();
+            sb.AppendLine("Massimi da quando BlackBox è acceso: GPU " + Fmt(col.SessionMaxPower) + " W · hotspot " + Fmt(col.SessionMaxHot) + " °C · in registrazione da " + (int)(DateTime.Now - col.StartedAt).TotalMinutes + " min.");
+            MessageBox.Show(sb.ToString(), "BlackBox — controllo dello stato", MessageBoxButton.OK, lv >= 2 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+        }
         void SaveSnapshot()
         {
             win.UpdateLayout();
