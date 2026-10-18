@@ -31,6 +31,7 @@ function Bundle([string]$title, [string[]]$files, [string]$dest) {
 Copy-Item (Join-Path $root 'docs\per-claude-ai\00-LEGGIMI-PROGETTO.md') $out -Force
 Copy-Item (Join-Path $root 'docs\per-claude-ai\ISTRUZIONI-DA-INCOLLARE.txt') $out -Force
 Copy-Item (Join-Path $root 'README.md') $out -Force
+Copy-Item (Join-Path $root 'CHANGELOG.md') $out -Force
 Copy-Item (Join-Path $root 'GUIDA.md') $out -Force
 Copy-Item (Join-Path $root 'data\limiti.json') $out -Force
 if (Test-Path (Join-Path $root 'PIANO-v1.2.md')) { Copy-Item (Join-Path $root 'PIANO-v1.2.md') $out -Force }

@@ -115,13 +115,14 @@ I limiti per modello stanno in `data/limiti.json` (verificati sulle pagine uffic
 
 ## Situazione al 18/10/2026
 
-- Fatto: tutte le fasi del piano 1.2 (sessioni, temperatura CPU, FPS, overlay, controllo
-  stato, OptiScaler, ottimizzazioni, installer), release v1.2.0 e v1.2.1 (benvenuto corretto,
-  pulsanti «Sistema», OptiScaler a prova di errore, revisione completa del codice) e v1.2.2 (pulsante «Cos'è?» su ogni voce, causa e soluzione dell'1% low basso, glossario nella guida). L'1% low rosso visto dall'utente il 17/10 era tutto dovuto all'Alt+Tab (nessuno scatto vero).
-- Sul PC dell'utente (18/10): HWiNFO con memoria condivisa attiva e **riavvio automatico di HWiNFO** attivo
-  (operazione pianificata «BlackBox\Riavvia HWiNFO», per il limite delle 12 ore della versione gratuita); **HAGS è spento** (conviene
-  accenderlo per la generazione di fotogrammi).
-- Il vecchio script «Monitor Spegnimenti» in Esecuzione automatica è stato tolto (collegamento
-  nel Cestino) il 18/10.
-- Idee per il futuro: firma digitale degli exe (niente avviso SmartScreen), aggiornamento
-  automatico facoltativo, grafici delle sessioni nella finestra.
+- **Versione 1.2.4** pubblicata; il repository è **pubblico** (dal 18/10, storia controllata: nessun dato
+  personale). Le novità di ogni versione sono in `CHANGELOG.md`.
+- BlackBox è **installato** sul PC dell'utente con l'installer (`%LocalAppData%\Programs\BlackBox`, avvio
+  automatico da lì). La cartella `dist\` del progetto serve solo per compilare.
+- Sul PC dell'utente: HWiNFO con memoria condivisa attiva e **riavvio automatico di HWiNFO** attivo
+  (operazione pianificata «BlackBox\Riavvia HWiNFO»); temperatura CPU letta (~54 °C a riposo).
+  **HAGS è ancora spento**: si accende dal Controllo stato (pulsante «Accendi HAGS», poi riavvio).
+- L'1% low rosso visto dall'utente il 17/10 era tutto dovuto all'Alt+Tab: durante il gioco vero nessuno scatto.
+- Il vecchio script «Monitor Spegnimenti» in Esecuzione automatica è stato tolto (collegamento nel Cestino).
+- Idee per il futuro: firma digitale degli exe (niente avviso SmartScreen), grafici delle sessioni nella
+  finestra, aggiornamento del programma con un pulsante (solo su richiesta).
