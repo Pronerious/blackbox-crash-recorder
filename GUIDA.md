@@ -28,7 +28,8 @@ programma: pulsante **Guida** in alto, oppure tasto destro sull'icona → **Guid
 14. [Controllo dello stato e UV/OC](#14-controllo-dello-stato-e-uvoc)
 15. [Il tuo PC: riconoscimento automatico](#15-il-tuo-pc-riconoscimento-automatico)
 16. [Giochi & OptiScaler](#16-giochi--optiscaler)
-17. [Le parole difficili, spiegate](#17-le-parole-difficili-spiegate)
+17. [Partite: grafici, confronto undervolt e report da condividere](#17-partite-grafici-confronto-undervolt-e-report-da-condividere)
+18. [Le parole difficili, spiegate](#18-le-parole-difficili-spiegate)
 
 ---
 
@@ -158,6 +159,8 @@ Windows: installa gli aggiornamenti di Windows Update.
 | Tasto destro → Apri monitor | apre la finestra |
 | Tasto destro → Ultimo report | apre l'ultimo report di spegnimento |
 | Tasto destro → Ultima sessione di gioco | apre il report dell'ultima partita |
+| Tasto destro → Partite e confronti | grafici delle partite e confronto di due undervolt (punto 17) |
+| Tasto destro → Copia l'ultimo report di crash | copia il report dell'ultimo spegnimento, da incollare dove chiedi aiuto (punto 17) |
 | Tasto destro → Overlay in gioco | acceso/spento, posizione, dimensione del testo (punto 13) |
 | Tasto destro → Giochi & OptiScaler | apre la gestione di OptiScaler (punto 16) |
 | Tasto destro → Il tuo PC | hardware riconosciuto, controllo dello stato e pulsanti per sistemare (punti 14-15) |
@@ -178,7 +181,7 @@ Tutto sta in `Documenti\BlackBox`:
 | `crash_AAAAMMGG_HHMMSS.txt` | il report di ogni spegnimento anomalo |
 | `configurazioni.log` | lo storico delle configurazioni del test A/B |
 | `sessione_<gioco>_<data>.txt` | il report di ogni partita (punto 10) |
-| `sessioni.csv` | una riga per partita: serve ai confronti; si apre con Excel |
+| `sessioni.csv` | una riga per partita: serve ai confronti e ai grafici (punto 17); si apre con Excel |
 | `sessione_in_corso.txt`, `controllo_tuning.txt` | file di lavoro: si cancellano da soli |
 | `impostazioni.ini` | le impostazioni di BlackBox |
 | `tools\PresentMon.exe` | PresentMon, se l'hai scaricato (punto 12) |
@@ -203,7 +206,7 @@ AMD e NVIDIA con il driver installato.
 e controlla che la memoria condivisa sia accesa (punto 11).
 
 **Gli FPS restano a "--".** Gli FPS si misurano solo durante una sessione di gioco.
-Se il gioco è aperto da poco, aspetta 20 secondi. Se nella riga *FPS* c'è un pulsante,
+Se il gioco è aperto da poco, aspetta 10 secondi. Se nella riga *FPS* c'è un pulsante,
 segui il punto 12.
 
 **L'overlay non si vede.** Controlla che sia acceso (pulsante *Overlay: ON* oppure
@@ -217,9 +220,15 @@ scheda video oltre il 60%. Un gioco molto leggero in finestra può restare sotto
 a schermo intero (o senza bordi), oppure attiva *Mostra anche fuori dai giochi*
 dell'overlay.
 
-**Un gioco si chiude all'avvio.** Alcuni giochi online con anti-cheat non vogliono
-programmi che leggono i sensori. Chiudi BlackBox dal tasto destro → *Esci* prima
-di giocare, e riaprilo dopo.
+**BlackBox dà problemi con l'anti-cheat?** È fatto per non darne: non entra nei giochi,
+non legge né scrive la loro memoria e non inietta niente. Del gioco chiede a Windows solo
+il nome e il percorso del file, con il permesso più basso che esiste (lo stesso che usa
+Gestione attività). L'overlay è una finestra trasparente sopra il gioco, non un aggancio
+alla grafica come quelli di Steam o Discord. Gli FPS li misura PresentMon, lo strumento
+ufficiale di Intel, dagli eventi di Windows. OptiScaler, che invece modifica i file del
+gioco, è bloccato nei giochi con anti-cheat.
+Se comunque un gioco si chiudesse all'avvio, chiudi BlackBox dal tasto destro → *Esci*
+prima di giocare e scrivi il nome del gioco su GitHub (pagina *Issues*).
 
 **Il PC continua a scaldare.** Apri la finestra e guarda *Più CPU*: è il programma
 che sta consumando di più. Se non è nell'elenco del punto 5, BlackBox non lo
@@ -605,7 +614,57 @@ OptiScaler (FPS, 1% low, watt). Confronta la stessa scena.
 Se OptiScaler era già installato a mano, BlackBox non lo tocca (usa il file
 `Remove_OptiScaler.bat` nella cartella del gioco).
 
-## 17. Le parole difficili, spiegate
+## 17. Partite: grafici, confronto undervolt e report da condividere
+
+Pulsante **Partite** in alto nella finestra (oppure tasto destro sull'icona → **Partite e
+confronti**). Tutto viene calcolato dai file già salvati e **solo mentre questa finestra
+è aperta**: durante il gioco non lavora e non toglie FPS.
+
+**Grafici della partita.** A sinistra l'elenco delle partite (le più recenti in alto).
+Clicchi una partita e vedi:
+
+- il riassunto (PC, driver, configurazione, FPS medio e 1% low, watt, temperature,
+  crash);
+- quattro grafici lungo tutta la partita: **FPS** (con gli FPS reali se c'è la
+  generazione di fotogrammi), **temperature** (hotspot, edge, CPU), **potenza** della
+  scheda video e **clock**. I buchi verso il basso negli FPS sono gli scatti o i
+  momenti in cui eri fuori dal gioco (Alt+Tab, menu).
+- **Copia riassunto (da incollare)**: copia il riassunto, pronto da incollare in un forum,
+  su Discord o in una chat con un assistente. **Apri report completo** apre il file
+  della partita.
+
+I grafici ci sono per le partite degli **ultimi 14 giorni** (i dati al secondo più vecchi
+vengono cancellati per non riempire il disco); riassunto e confronto restano per sempre.
+
+**Confronta due partite (undervolt).** Serve a capire quale impostazione va meglio:
+
+1. Nella finestra principale scrivi la configurazione nel riquadro del test A/B
+   (es. «UV 1080 mV») e premi **Salva**.
+2. Gioca almeno 10 minuti, sempre nella stessa zona o scena del gioco.
+3. Cambia l'impostazione in Adrenalin, scrivi la nuova configurazione (es. «UV 1050 mV»)
+   e salva.
+4. Rigioca la stessa scena per lo stesso tempo.
+5. In *Partite → Confronta* scegli la partita A e la partita B.
+
+BlackBox mette i valori uno accanto all'altro (verde = meglio, rosso = peggio) e dà un
+giudizio:
+
+- prima conta la **stabilità**: se una delle due ha avuto crash, vince l'altra;
+- poi l'**efficienza** (FPS veri per ogni watt): sotto il 3% di differenza sono
+  «praticamente uguali», perché è normale variazione;
+- se sono **giochi diversi** non dà un vincitore; avvisa anche se una partita è più
+  corta di 5 minuti, se la configurazione scritta è la stessa o se la generazione di
+  fotogrammi è attiva solo in una delle due.
+
+**Copia confronto (da incollare)** copia il confronto in testo.
+
+**Report di crash da condividere.** Tasto destro sull'icona → **Copia l'ultimo report di
+crash (da incollare)**: copia il report dell'ultimo spegnimento anomalo, da incollare
+dove chiedi aiuto. I testi copiati contengono solo i dati del PC (modelli di processore e
+scheda video, driver, valori misurati): il tuo nome utente, il nome del PC e la tua
+cartella utente vengono sostituiti da «(nascosto)» e `%USERPROFILE%`.
+
+## 18. Le parole difficili, spiegate
 
 Nel *Controllo stato* ogni voce ha il pulsante **Cos'è?** con queste spiegazioni.
 

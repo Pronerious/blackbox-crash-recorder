@@ -193,7 +193,7 @@ namespace BlackBox
         {
             var c = new GameSession { Game = s.Foreground, Pid = s.ForegroundPid, Start = candSince, LastFg = s.Time, Config = Analyzer.ConfigAt(dir, candSince) };
             try { c.Proc = Process.GetProcessById(c.Pid); } catch { }
-            try { if (c.Proc != null) c.ExePath = c.Proc.MainModule.FileName; } catch { }
+            try { c.ExePath = Native.ProcessPath(c.Pid); } catch { }   // permesso minimo: niente lettura della memoria del gioco
             c.Samples.AddRange(candSamples);
             var prev = SessionLog.Read(dir).Where(x => string.Equals(x.Game, c.Game, StringComparison.OrdinalIgnoreCase) && !double.IsNaN(x.Eff))
                                            .OrderByDescending(x => x.Start).Take(5).ToList();
@@ -209,7 +209,9 @@ namespace BlackBox
                 {
                     var om = Opti.ReadManifest(Path.GetDirectoryName(c.ExePath));
                     c.OptiInstalled = om.Version; c.OptiProxy = om.Proxy;
-                    c.OptiCheckAt = s.Time.AddSeconds(15);   // OptiScaler si carica all'avvio del gioco: controllo tra poco
+                    // controllo solo dove BlackBox ha installato OptiScaler (mai nei giochi con anti-cheat, dove e' bloccato):
+                    // per vedere le DLL caricate serve aprire il gioco, e negli altri giochi non lo si fa mai
+                    if (om.Version != "") c.OptiCheckAt = s.Time.AddSeconds(15);
                 }
             }
             catch { }
@@ -541,6 +543,13 @@ namespace BlackBox
     // ---------------------------------------------------------------- Storico delle sessioni (sessioni.csv)
     public class SessionRow
     {
+        public readonly Dictionary<string, string> Raw = new Dictionary<string, string>();
+        public double Num(string key)
+        {
+            string v; double d;
+            return Raw.TryGetValue(key, out v) && double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out d) ? d : double.NaN;
+        }
+        public string Txt(string key) { string v; return Raw.TryGetValue(key, out v) ? v : ""; }
         public DateTime Start, End;
         public string Game = "", Config = "", Report = "";
         public double ClkMax = double.NaN, MvLoad = double.NaN, Eff = double.NaN, Fps = double.NaN, Low = double.NaN, Power = double.NaN;
@@ -610,6 +619,7 @@ namespace BlackBox
                     if (double.TryParse(g("fps_1low"), NumberStyles.Float, CultureInfo.InvariantCulture, out d)) r.Low = d;
                     if (double.TryParse(g("potenza_media_w"), NumberStyles.Float, CultureInfo.InvariantCulture, out d)) r.Power = d;
                     r.Opti = g("optiscaler");
+                    for (int i = 0; i < cols.Length && i < a.Length; i++) r.Raw[cols[i]] = a[i];   // tutti i valori, per grafici e confronti
                     if (int.TryParse(g("tdr"), out n)) r.Tdr = n;
                     if (int.TryParse(g("crash_gioco"), out n)) r.Crash = n;
                     res.Add(r);

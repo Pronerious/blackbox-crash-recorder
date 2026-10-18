@@ -24,6 +24,118 @@
         </Setter.Value>
       </Setter>
     </Style>
+    <!-- suggerimenti scuri -->
+    <Style TargetType="ToolTip">
+      <Setter Property="Background" Value="#1D212B"/>
+      <Setter Property="Foreground" Value="#E6E8EE"/>
+      <Setter Property="BorderBrush" Value="#2C3240"/>
+      <Setter Property="Padding" Value="8,5"/>
+    </Style>
+    <!-- caselle di spunta: testo chiaro -->
+    <Style TargetType="CheckBox">
+      <Setter Property="Foreground" Value="#E6E8EE"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <!-- barre di scorrimento sottili e scure -->
+    <Style TargetType="ScrollBar">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Width" Value="10"/>
+      <Setter Property="MinWidth" Value="10"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ScrollBar">
+            <Grid Background="Transparent">
+              <Track x:Name="PART_Track" IsDirectionReversed="True">
+                <Track.Thumb>
+                  <Thumb>
+                    <Thumb.Template>
+                      <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="t" Background="#2E3442" CornerRadius="4" Margin="2"/>
+                        <ControlTemplate.Triggers>
+                          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="t" Property="Background" Value="#465066"/></Trigger>
+                        </ControlTemplate.Triggers>
+                      </ControlTemplate>
+                    </Thumb.Template>
+                  </Thumb>
+                </Track.Thumb>
+              </Track>
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+      <Style.Triggers>
+        <Trigger Property="Orientation" Value="Horizontal">
+          <Setter Property="Width" Value="Auto"/>
+          <Setter Property="Height" Value="10"/>
+          <Setter Property="MinHeight" Value="10"/>
+          <Setter Property="Template">
+            <Setter.Value>
+              <ControlTemplate TargetType="ScrollBar">
+                <Grid Background="Transparent">
+                  <Track x:Name="PART_Track" IsDirectionReversed="False">
+                    <Track.Thumb>
+                      <Thumb>
+                        <Thumb.Template>
+                          <ControlTemplate TargetType="Thumb"><Border Background="#2E3442" CornerRadius="4" Margin="2"/></ControlTemplate>
+                        </Thumb.Template>
+                      </Thumb>
+                    </Track.Thumb>
+                  </Track>
+                </Grid>
+              </ControlTemplate>
+            </Setter.Value>
+          </Setter>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+    <!-- menu a tendina scuri -->
+    <Style TargetType="ComboBoxItem">
+      <Setter Property="Foreground" Value="#E6E8EE"/>
+      <Setter Property="Padding" Value="8,5"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ComboBoxItem">
+            <Border x:Name="b" Background="Transparent" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="b" Property="Background" Value="#2A303D"/></Trigger>
+              <Trigger Property="IsSelected" Value="True"><Setter TargetName="b" Property="Background" Value="#22293A"/></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="ComboBox">
+      <Setter Property="Foreground" Value="#E6E8EE"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ComboBox">
+            <Grid>
+              <ToggleButton IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" Focusable="False" ClickMode="Press">
+                <ToggleButton.Template>
+                  <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="bd" Background="#1D212B" BorderBrush="#2C3240" BorderThickness="1" CornerRadius="6">
+                      <Path HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" Data="M0,0 L4,4 L8,0" Stroke="#8A91A0" StrokeThickness="1.5"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                      <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="bd" Property="Background" Value="#2A303D"/></Trigger>
+                    </ControlTemplate.Triggers>
+                  </ControlTemplate>
+                </ToggleButton.Template>
+              </ToggleButton>
+              <ContentPresenter Margin="10,5,28,5" VerticalAlignment="Center" IsHitTestVisible="False"
+                                Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"/>
+              <Popup IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
+                <Border Background="#161920" BorderBrush="#2C3240" BorderThickness="1" CornerRadius="6" Margin="0,2,0,0"
+                        MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" MaxHeight="320">
+                  <ScrollViewer><ItemsPresenter/></ScrollViewer>
+                </Border>
+              </Popup>
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
     <Style x:Key="Card" TargetType="Border">
       <Setter Property="Background" Value="#161920"/>
       <Setter Property="BorderBrush" Value="#232733"/>
@@ -61,11 +173,12 @@
       <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
         <Button x:Name="BtnReport" Content="Ultimo report"/>
         <Button x:Name="BtnLogs" Content="Apri cartella log"/>
+        <Button x:Name="BtnSessions" Content="Partite" ToolTip="Grafici delle partite, confronto di due partite (undervolt), riassunti da copiare"/>
         <Button x:Name="BtnGames" Content="Giochi &amp; OptiScaler"/>
         <Button x:Name="BtnOverlay" Content="Overlay"/>
         <Button x:Name="BtnAuto" Content="Avvio automatico: OFF"/>
         <Button x:Name="BtnGuide" Content="Guida"/>
-        <Button x:Name="BtnTray" Content="Nascondi nella barra"/>
+        <Button x:Name="BtnTray" Content="Nascondi" ToolTip="Nasconde la finestra: BlackBox continua a registrare vicino all'orologio"/>
       </StackPanel>
     </Grid>
 

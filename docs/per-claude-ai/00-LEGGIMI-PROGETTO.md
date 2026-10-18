@@ -33,7 +33,7 @@ WPF scura, testi in italiano) che:
 
 Proprietario: non è un programmatore. PC: Ryzen 7 7800X3D, Radeon RX 7800 XT Sapphire Nitro+,
 32 GB, Windows 11. Repository: https://github.com/Pronerious/blackbox-crash-recorder
-(branch `main`). Versione attuale: **1.2.6** (release del 18/10/2026).
+(branch `main`). Versione attuale: **1.2.7** (release del 18/10/2026).
 
 ## Regole fisse
 
@@ -65,12 +65,13 @@ Proprietario: non è un programmatore. PC: Ryzen 7 7800X3D, Radeon RX 7800 XT Sa
 | `src/Overlay.cs` | overlay in gioco (finestra trasparente click-through, tasto rapido, personalizzazione) |
 | `src/Health.cs` | controllo dello stato e limiti (`Limits`) |
 | `src/LimitsDb.cs` + `data/limiti.json` | tabella dei limiti di temperatura ufficiali (AMD, Intel, NVIDIA) con fonte per ogni riga; pulsante «Aggiorna i limiti» la scarica dal repository (solo su richiesta) |
-| `src/Glossary.cs` | spiegazioni in parole semplici di ogni termine (pulsante «Cos'è?»), uguali al punto 17 della guida |
+| `src/Glossary.cs` | spiegazioni in parole semplici di ogni termine (pulsante «Cos'è?»), uguali al punto 18 della guida |
 | `src/StatusWindow.cs` | finestra «Controllo dello stato» / benvenuto, con i pulsanti che sistemano i problemi |
 | `src/Hardware.cs` | riconoscimento di CPU / GPU / driver / Windows e limiti per modello; impostazioni utili di Windows (HAGS, Modalità gioco) e loro correzione (`ApplyFix`) |
 | `src/CpuTemp.cs` | temperatura CPU da HWiNFO (memoria condivisa) o LibreHardwareMonitor |
 | `src/Opti.cs` | OptiScaler: ricerca giochi, upscaler, anti-cheat, pacchetto, installa/rimuovi/aggiorna, controllo caricamento |
 | `src/OptiWindow.cs` | finestra «Giochi & OptiScaler» |
+| `src/SessionsWindow.cs` | finestra «Partite»: grafici di ogni partita (dai CSV al secondo), confronto di due partite (undervolt) con giudizio, riassunti da copiare con nome utente/PC nascosti (`Share`) |
 | `setup/Setup.cs` | installer senza amministratore (anche disinstallatore; `/silent`, `/uninstall /quiet`) |
 | `build.ps1` | compila `dist\BlackBox.exe` e `dist\BlackBox-Setup-<versione>.exe` |
 
@@ -115,14 +116,16 @@ I limiti per modello stanno in `data/limiti.json` (verificati sulle pagine uffic
 
 ## Situazione al 18/10/2026
 
-- **Versione 1.2.6** pubblicata; il repository è **pubblico** (dal 18/10, storia controllata: nessun dato
+- **Versione 1.2.7** pubblicata; il repository è **pubblico** (dal 18/10, storia controllata: nessun dato
   personale). Le novità di ogni versione sono in `CHANGELOG.md`.
 - BlackBox è **installato** sul PC dell'utente con l'installer (`%LocalAppData%\Programs\BlackBox`, avvio
   automatico da lì). La cartella `dist\` del progetto serve solo per compilare.
 - Sul PC dell'utente: HWiNFO con memoria condivisa attiva e **riavvio automatico di HWiNFO** attivo
   (operazione pianificata «BlackBox\Riavvia HWiNFO»); temperatura CPU letta (~54 °C a riposo).
-  **HAGS è ancora spento**: si accende dal Controllo stato (pulsante «Accendi HAGS», poi riavvio).
+  **HAGS acceso** (HwSchMode = 2).
 - L'1% low rosso visto dall'utente il 17/10 era tutto dovuto all'Alt+Tab: durante il gioco vero nessuno scatto.
 - Il vecchio script «Monitor Spegnimenti» in Esecuzione automatica è stato tolto (collegamento nel Cestino).
-- Idee per il futuro: firma digitale degli exe (niente avviso SmartScreen), grafici delle sessioni nella
-  finestra, aggiornamento del programma con un pulsante (solo su richiesta).
+- Anti-cheat: del gioco si legge solo il percorso con `PROCESS_QUERY_LIMITED_INFORMATION` (`Native.ProcessPath`),
+  mai `MainModule`; il controllo dei moduli di OptiScaler gira solo nei giochi dove BlackBox l'ha installato.
+- Idee per il futuro: firma digitale degli exe (niente avviso SmartScreen), aggiornamento del programma con un
+  pulsante (solo su richiesta).

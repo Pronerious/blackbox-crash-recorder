@@ -24,9 +24,9 @@ using SD = System.Drawing;
 
 [assembly: AssemblyTitle("BlackBox")]
 [assembly: AssemblyProduct("BlackBox")]
-[assembly: AssemblyVersion("1.2.6.0")]
-[assembly: AssemblyFileVersion("1.2.6.0")]
-[assembly: AssemblyInformationalVersion("1.2.6")]
+[assembly: AssemblyVersion("1.2.7.0")]
+[assembly: AssemblyFileVersion("1.2.7.0")]
+[assembly: AssemblyInformationalVersion("1.2.7")]
 [assembly: AssemblyDescription("BlackBox - la scatola nera del PC, fatta per giocare")]
 
 namespace BlackBox
@@ -153,7 +153,9 @@ namespace BlackBox
             menu.Items.Add("Apri monitor", null, (s, e) => ShowWindow());
             menu.Items.Add("Ultimo report", null, (s, e) => OpenLastReport());
             menu.Items.Add("Ultima sessione di gioco", null, (s, e) => OpenLastSession());
+            menu.Items.Add("Partite e confronti", null, (s, e) => { ShowWindow(); OpenSessions(); });
             menu.Items.Add("Giochi && OptiScaler", null, (s, e) => { ShowWindow(); OpenGames(); });
+            menu.Items.Add("Copia l'ultimo report di crash (da incollare)", null, (s, e) => CopyLastCrash());
             menu.Items.Add("Il tuo PC (hardware riconosciuto)", null, (s, e) => ShowMyPc(false));
             menu.Items.Add("Apri cartella log", null, (s, e) => OpenLogs());
             menu.Items.Add("Guida", null, (s, e) => OpenGuide());
@@ -517,6 +519,7 @@ namespace BlackBox
             F<Button>("BtnReport").Click += (s, e) => OpenLastReport();
             F<Button>("BtnFps").Click += (s, e) => OnFpsButton();
             F<Button>("BtnGames").Click += (s, e) => OpenGames();
+            F<Button>("BtnSessions").Click += (s, e) => OpenSessions();
             F<TextBlock>("ActMax").MouseLeftButtonUp += (s, e) => ShowHealth();
             F<Button>("BtnOverlay").Click += (s, e) => { if (overlay != null) overlay.SetEnabled(!overlay.Enabled); };
             UpdateOverlayBtn();
@@ -733,6 +736,24 @@ namespace BlackBox
             new StatusWindow(win, col, welcome, fix => OnFpsButton()).ShowDialog();
             if (welcome) Hardware.WelcomeShown();
         }
+        SessionsWindow sessWin;
+        void OpenSessions()
+        {
+            if (sessWin != null) { sessWin.Activate(); return; }
+            sessWin = new SessionsWindow(win, col);
+            sessWin.Closed += () => sessWin = null;
+            sessWin.Show();
+        }
+
+        // riassunto dell'ultimo spegnimento anomalo negli appunti, senza la tabella dei campioni grezzi
+        void CopyLastCrash()
+        {
+            var r = new DirectoryInfo(logDir).GetFiles("crash_*.txt").OrderByDescending(f => f.LastWriteTime).FirstOrDefault();
+            if (r == null) { MessageBox.Show("Nessun report di crash da copiare.", "BlackBox"); return; }
+            try { Clipboard.SetText(Share.Crash(r.FullName)); tray.ShowBalloonTip(4000, "BlackBox", "Report del crash copiato: incollalo (Ctrl + V) dove vuoi.", WF.ToolTipIcon.Info); }
+            catch (Exception ex) { MessageBox.Show("Non riesco a copiare: " + ex.Message, "BlackBox"); }
+        }
+
         OptiWindow optiWin;
         void OpenGames()
         {

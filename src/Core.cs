@@ -218,7 +218,7 @@ namespace BlackBox
         }
     }
 
-    static class Native
+    public static class Native
     {
         [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
@@ -230,6 +230,23 @@ namespace BlackBox
         [DllImport("user32.dll")] public static extern bool GetMonitorInfo(IntPtr m, ref MONITORINFO mi);
         [DllImport("user32.dll")] public static extern IntPtr GetShellWindow();
         [DllImport("user32.dll")] public static extern int GetWindowLongW(IntPtr h, int idx);
+        [DllImport("kernel32.dll", SetLastError = true)] static extern IntPtr OpenProcess(uint access, bool inherit, int pid);
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern bool QueryFullProcessImageNameW(IntPtr h, int flags, StringBuilder name, ref int size);
+        [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
+
+        // percorso dell'eseguibile con il permesso MINIMO di Windows (PROCESS_QUERY_LIMITED_INFORMATION, come Gestione attivita'):
+        // non legge la memoria del processo, quindi non disturba gli anti-cheat dei giochi
+        public static string ProcessPath(int pid)
+        {
+            IntPtr h = OpenProcess(0x1000, false, pid);
+            if (h == IntPtr.Zero) return "";
+            try
+            {
+                var sb = new StringBuilder(1024); int n = sb.Capacity;
+                return QueryFullProcessImageNameW(h, 0, sb, ref n) ? sb.ToString(0, n) : "";
+            }
+            finally { CloseHandle(h); }
+        }
 
         // la finestra copre l'intero monitor su cui si trova (schermo intero vero o finestra senza bordi)
         public static bool IsFullscreen(IntPtr h)

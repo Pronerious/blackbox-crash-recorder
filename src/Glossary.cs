@@ -5,7 +5,7 @@ namespace BlackBox
 {
     // ---------------------------------------------------------------- Le parole difficili, spiegate
     // Per ogni voce del controllo dello stato: cos'e' e a cosa serve, in parole semplici (pulsante "Cos'e'?").
-    // Gli stessi testi sono nella guida (punto 17).
+    // Gli stessi testi sono nella guida (punto 18).
     public static class Glossary
     {
         public const string Hags =

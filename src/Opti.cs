@@ -442,7 +442,7 @@ namespace BlackBox
         {
             foreach (var p in Process.GetProcesses())
                 using (p)
-                    try { if (p.MainModule.FileName.StartsWith(dir + "\\", StringComparison.OrdinalIgnoreCase)) return p.ProcessName; } catch { }
+                    try { if (Native.ProcessPath(p.Id).StartsWith(dir + "\\", StringComparison.OrdinalIgnoreCase)) return p.ProcessName; } catch { }   // permesso minimo
             return null;
         }
 

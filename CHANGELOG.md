@@ -3,6 +3,16 @@
 I file di ogni versione (installer, exe portatile, guida) sono nella pagina
 [Releases](https://github.com/Pronerious/blackbox-crash-recorder/releases).
 
+## 1.2.7 — 18/10/2026
+- **Nuova finestra «Partite»** (pulsante *Partite* o tasto destro sull'icona → *Partite e confronti*):
+  - **grafici di ogni partita**: FPS (e FPS reali con la generazione di fotogrammi), temperature hotspot/edge/CPU, watt e clock della scheda video;
+  - **confronto di due partite** per capire quale undervolt va meglio: valori affiancati in verde/rosso e giudizio (prima la stabilità, poi gli FPS per watt; sotto il 3% «praticamente uguali»; nessun vincitore tra giochi diversi);
+  - **riassunti da copiare e incollare** (partita, confronto, ultimo report di crash) con nome utente, nome del PC e cartelle nascosti.
+  Tutto calcolato dai file già salvati e solo a finestra aperta: nessun effetto sul gioco.
+- **Ancora più tranquillo con gli anti-cheat**: del gioco BlackBox chiede a Windows solo nome e percorso del file, con il permesso più basso (lo stesso di Gestione attività); il controllo dei file di OptiScaler avviene solo nei giochi dove l'hai installato.
+- Grafica: menu a tendina, barre di scorrimento e suggerimenti scuri, coerenti con il resto del programma.
+- Guida: nuovo punto 17 (Partite) e risposta alla domanda «BlackBox dà problemi con l'anti-cheat?».
+
 ## 1.2.6 — 18/10/2026
 - **Emulatori riconosciuti** (PCSX2, RetroArch, DuckStation, PPSSPP, RPCS3, Dolphin, Cemu, Ryujinx, Xenia, Xemu e altri): overlay e FPS anche se usano poco la scheda video.
 - **Giochi a schermo intero** (o senza bordi) riconosciuti dal 15% di scheda video; browser, lettori video e app ingrandite esclusi.

@@ -19,7 +19,8 @@ sistema.
 > (no injection, anti-cheat safe, ~0.2% CPU), a health check based on the **official
 > temperature limits** of your exact CPU and GPU model (no false alarms), the likely cause
 > and fix when the 1% low drops, undervolt/overclock stability and efficiency (real FPS
-> per watt), "Adrenalin reset my tuning after a crash" alerts, per-game session reports,
+> per watt), "Adrenalin reset my tuning after a crash" alerts, per-game session reports
+> with charts, a side-by-side undervolt comparison of two sessions, shareable summaries,
 > one-click fixes (HAGS, Game Mode, HWiNFO shared memory, automatic HWiNFO restart for the
 > free 12-hour limit) and a fool-proof OptiScaler manager (anti-cheat, online and 32-bit
 > games blocked, backups, recommended DLL name per game). No admin rights, no telemetry;
@@ -81,6 +82,25 @@ sistema.
 - **Leggero**: in partita passa a priorità bassa, dirada i controlli, non mostra
   notifiche (le tiene per fine partita). Misurato: circa **0,15–0,3% della CPU** con
   l'overlay acceso.
+- **Tranquillo con gli anti-cheat**: non entra nei giochi, non legge la loro memoria;
+  del gioco chiede a Windows solo nome e percorso del file, con il permesso più basso
+  (lo stesso di Gestione attività).
+
+### Partite: grafici e confronto degli undervolt
+
+<p align="center">
+  <img src="docs/img/partite.png" alt="Grafici di una partita" width="620">
+</p>
+
+- **Grafici di ogni partita**: FPS (e FPS reali con la generazione di fotogrammi),
+  temperature di hotspot, edge e CPU, watt e clock della scheda video, minuto per minuto.
+- **Confronta due partite** (es. «UV 1080 mV» contro «UV 1050 mV»): valori affiancati in
+  verde/rosso e un giudizio onesto. Prima la stabilità, poi gli FPS per watt; sotto il 3%
+  è «praticamente uguale», e con giochi diversi non dà un vincitore.
+- **Riassunti da incollare** (partita, confronto, ultimo report di crash) per chiedere
+  aiuto su forum, Discord o a un assistente: nome utente, nome del PC e cartelle
+  vengono nascosti.
+- Tutto calcolato dai file già salvati e solo a finestra aperta: **zero effetto sul gioco**.
 
 ### Controllo dello stato: tutto spiegato, problemi sistemati
 
@@ -147,7 +167,7 @@ sistema.
 
 Scarica dalla pagina **[Releases](../../releases)**:
 
-- **`BlackBox-Setup-1.2.6.exe`** (consigliato): installa BlackBox per il tuo utente
+- **`BlackBox-Setup-1.2.7.exe`** (consigliato): installa BlackBox per il tuo utente
   in `%LocalAppData%\Programs\BlackBox`, **senza amministratore**, con collegamento nel
   menu Start, avvio automatico e disinstallazione da *Impostazioni → App*. Se BlackBox
   è già installato, prima lo disinstalla del tutto e poi installa la versione nuova; i tuoi
@@ -186,14 +206,15 @@ creare il progetto su claude.ai sono in
 ## Uso
 
 La guida completa, passo passo, è in **[GUIDA.md](GUIDA.md)** e si apre anche dal
-programma (pulsante **Guida**). Il punto 17 spiega tutte le parole difficili.
+programma (pulsante **Guida**). Il punto 18 spiega tutte le parole difficili.
 
 | Azione | Effetto |
 |---|---|
 | Chiudi la finestra | va nell'area di notifica e **continua a registrare** |
 | Clic sull'icona | riapre la finestra |
 | Clic sulla riga *Controllo stato* | stato, «Cos'è?» e pulsanti che sistemano |
-| Tasto destro sull'icona | report, sessioni, Giochi & OptiScaler, overlay, **Il tuo PC**, guida, esci |
+| Pulsante **Partite** | grafici delle partite e confronto di due undervolt |
+| Tasto destro sull'icona | report, sessioni, **Partite e confronti**, copia dell'ultimo report di crash, Giochi & OptiScaler, overlay, **Il tuo PC**, guida, esci |
 | **Ctrl + Shift + O** | overlay acceso/spento, anche in gioco |
 
 Opzioni da riga di comando: `--tray` (parte nell'area di notifica), `--logdir <cartella>`
