@@ -1,65 +1,118 @@
-# BlackBox — la scatola nera del tuo PC
+# BlackBox — la scatola nera del tuo PC, fatta per giocare
 
-Il PC si spegne o si riavvia da solo, senza schermata blu e senza lasciare tracce?
-**BlackBox** registra di continuo lo stato del sistema, come la scatola nera di un aereo.
-Dopo uno spegnimento anomalo crea un **report con gli ultimi minuti prima del crash** e una **diagnosi automatica** della causa più probabile.
+**BlackBox** registra di continuo lo stato del PC, come la scatola nera di un aereo, e
+mentre giochi diventa il tuo cruscotto: FPS veri, overlay leggero, controllo della
+stabilità di undervolt/overclock e gestione di OptiScaler. Se il PC si spegne da solo
+ti dice cosa stava succedendo un attimo prima.
 
-> 🇬🇧 *BlackBox is a lightweight Windows "flight recorder": it logs CPU/GPU/RAM state every second straight to disk and, after an unexpected shutdown (Kernel-Power 41), produces a report of the last minutes before the crash with an automatic diagnosis (PSU / GPU power spike, CPU undervolt, RAM profile, overheating, sleep transitions, BSOD). It also restarts known Windows shell components (TextInputHost, SearchHost, …) when they get stuck burning a CPU core for over a minute. 100% local, no network, no telemetry. UI in Italian.*
+> 🇬🇧 *BlackBox is a lightweight Windows "flight recorder" and gaming companion. It logs
+> CPU/GPU/RAM every second straight to disk and explains unexpected shutdowns
+> (Kernel-Power 41) with an automatic diagnosis. While you play it detects the game
+> session by itself and gives you: FPS / 1% low / frame time via Intel PresentMon,
+> frame-generation detection (real vs generated frames), a click-through in-game overlay
+> (no injection, anti-cheat safe, ~0.2% CPU), a health check tuned to your exact CPU and
+> GPU model (no false alarms), undervolt/overclock stability and efficiency (real FPS
+> per watt), throttling and "Adrenalin reset my tuning after a crash" alerts, a per-game
+> session report, and a one-click OptiScaler manager (install / update / remove with
+> backups, anti-cheat block, "is it really loaded?" check). No admin rights, no
+> telemetry; the only network access is the downloads you start yourself from the
+> official GitHub releases. UI in Italian.*
 
 ---
 
 ## Cosa fa
 
-- **Registrazione ogni secondo, direttamente su disco** (scrittura senza cache): anche se la corrente salta di colpo resta l'ultimo secondo prima dello spegnimento.
-- **CPU**: carico totale, core più carico, frequenza reale.
-- **GPU**: carico, **potenza con picchi letti 5 volte al secondo**, frequenze, tensione, temperature (edge / hotspot / memoria), ventola.
-  - Schede **AMD** (tramite il driver, `atiadlxx.dll`) e **NVIDIA** (tramite `nvml.dll`).
-- **RAM / VRAM**, app in primo piano, processi che usano più CPU e GPU.
-- **Eventi di Windows**: sospensione e ripresa, crash del driver video (TDR), errori hardware WHEA, schermate blu, crash delle app, buchi nei dati.
-- **Report automatico** al riavvio dopo un Kernel-Power 41, con:
-  - medie e massimi dell'ultimo minuto;
-  - ultimi 5 minuti di dati;
-  - **diagnosi**: picco di potenza GPU → alimentatore, crash a basso carico → undervolt CPU/RAM, surriscaldamento, durante sospensione/spegnimento, BSOD, spegnimento manuale.
-  - Le soglie di potenza sono **relative alla tua scheda** (massimo mai registrato su quel PC), quindi valgono per qualsiasi GPU.
-- **Test A/B**: scrivi la configurazione attuale (es. `CO -20, EXPO ON, GPU UV -50mV`). BlackBox associa ogni spegnimento alla configurazione attiva e conta i giorni stabili, così capisci quale modifica risolve davvero.
-- **Storico** di tutti gli spegnimenti anomali degli ultimi 120 giorni.
-- **Sblocco automatico dei processi di Windows impazziti**: alcuni componenti di Windows a volte restano bloccati in un ciclo, usano un core intero del processore e scaldano il PC senza motivo. Se uno di questi resta sopra il 50% di un core per più di 60 secondi di fila, BlackBox lo chiude, lo scrive negli eventi e mostra una notifica. Windows lo riapre da solo, pulito, appena serve. Controllati:
+### Sempre, in background
 
-  | Processo | Cos'è |
-  |---|---|
-  | `TextInputHost` | tastiera virtuale, pannello emoji (Win + .), cronologia appunti (Win + V) |
-  | `SearchHost` | pannello Cerca |
-  | `StartMenuExperienceHost` | menu Start |
-  | `ShellExperienceHost` | centro notifiche, calendario, impostazioni rapide |
-  | `CrossDeviceResume` | "riprendi dal telefono" (bug noto di Windows 11) |
-  | `Widgets`, `WidgetService` | pannello Widget |
-  | `PhoneExperienceHost` | Collegamento al telefono |
-  | `LockApp` | schermata di blocco |
+- **Registrazione ogni secondo, direttamente su disco** (scrittura senza cache): anche
+  se la corrente salta di colpo resta l'ultimo secondo prima dello spegnimento.
+- **CPU, GPU, RAM, VRAM**: carico, frequenze, tensione, potenza (picchi letti 5 volte
+  al secondo), temperature edge/hotspot/memoria, ventola. Schede **AMD** (driver
+  `atiadlxx.dll`) e **NVIDIA** (`nvml.dll`).
+- **Temperatura vera della CPU** (Tctl/Tdie) da HWiNFO o LibreHardwareMonitor, se
+  aperti.
+- **Eventi di Windows**: sospensione, crash del driver video (TDR), errori hardware
+  WHEA, schermate blu, crash delle app.
+- **Report automatico dopo uno spegnimento anomalo**, con diagnosi: picco di potenza
+  GPU → alimentatore, crash a basso carico → undervolt CPU/RAM, surriscaldamento,
+  sospensione/spegnimento, BSOD, spegnimento manuale.
+- **Test A/B** delle configurazioni (BIOS, undervolt...): ogni crash è legato alla
+  configurazione attiva.
+- **Riconoscimento del PC**: al primo avvio (e a ogni avvio) riconosce CPU, scheda
+  video, driver, Adrenalin e Windows e usa i **limiti di quel modello** (es. RX 7800 XT
+  hotspot fino a 110 °C, Ryzen 7 7800X3D fino a 89 °C). Si accorge se cambi scheda o
+  aggiorni il driver.
+- **Sblocco prudente dei componenti di Windows bloccati** (TextInputHost, SearchHost,
+  menu Start, Widget...): solo con consumo piatto da oltre 60 s, mai se li stai usando,
+  **mai durante una partita**, al massimo 3 volte all'ora. Gli altri programmi non
+  vengono mai chiusi.
 
-  Nessun altro processo viene mai toccato: i tuoi programmi e i giochi non vengono chiusi.
-- **Area di notifica**: chiudi la finestra e continua a registrare in background; notifiche quando rileva un problema; avvio automatico con Windows (opzionale).
+### Quando giochi (parte da solo)
+
+- **Sessione di gioco**: si apre quando il gioco in primo piano usa la GPU oltre il 60%
+  per 20 s; a fine partita scrive un **report** (`sessione_<gioco>_<data>.txt`).
+- **FPS, 1% low e frame time** con PresentMon di Intel.
+- **Generazione di fotogrammi riconosciuta** (FSR 3, DLSS/XeSS FG): mostra anche gli
+  **FPS reali**, cioè quelli calcolati davvero.
+- **Overlay in gioco**: blocco o barra, 6 posizioni, colori, sfondo e righe a scelta,
+  tasto rapido Ctrl+Shift+O. Non entra dentro il gioco (nessuna DLL iniettata), quindi
+  niente conflitti con gli anti-cheat; il gioco resta in *Independent Flip*.
+- **Controllo dello stato**: «✔ tutto ok» oppure cosa non va, con soglie sul tuo
+  hardware e medie di 30 s (niente falsi allarmi per un picco di un attimo).
+- **Undervolt / overclock**: stabilità (crash del driver, crash del gioco, throttling
+  da calore), **efficienza in FPS reali per watt** confrontata con le tue partite
+  precedenti, e avviso se **Adrenalin ha rimesso i valori di fabbrica** dopo un crash.
+- **Leggero**: in partita passa a priorità bassa, dirada i controlli, non mostra
+  notifiche (le tiene per fine partita). Misurato: circa **0,15–0,3% della CPU** con
+  l'overlay acceso.
+
+### Giochi & OptiScaler
+
+- Trova i giochi di **Steam, Epic, GOG**, quelli visti in sessione e le cartelle
+  aggiunte a mano; riconosce gli upscaler (DLSS, FSR 3.1, FSR 2, XeSS) e consiglia se
+  OptiScaler serve.
+- **Blocca i giochi con anti-cheat** (Easy Anti-Cheat, BattlEye, EA AntiCheat,
+  Vanguard...): rischio ban.
+- **Installa, aggiorna, rimuove** OptiScaler: copie di sicurezza dei file del gioco,
+  manifest, la rimozione riporta la cartella esattamente com'era; l'aggiornamento
+  tiene le tue impostazioni.
+- Controlla in partita che OptiScaler sia **davvero caricato** e riconosce i crash
+  causati da una sua DLL.
 
 ## Privacy
 
-- **Nessuna connessione di rete, nessuna telemetria, nessun aggiornamento automatico.**
-- L'unica azione sul sistema è lo sblocco automatico descritto sopra, limitato all'elenco fisso di componenti di Windows.
-- Legge solo i contatori di prestazioni di Windows, il driver della scheda video già installato e il Registro eventi.
-- Tutti i dati restano in `Documenti\BlackBox` sul tuo PC. I CSV più vecchi di 14 giorni vengono cancellati automaticamente.
-- Il codice sorgente è tutto qui: puoi leggerlo e compilarlo da solo.
+- **Nessuna telemetria, nessun invio di dati, nessun aggiornamento automatico.**
+- Le **uniche connessioni a internet** sono i download che avvii tu con un pulsante,
+  dalle release ufficiali su GitHub: **PresentMon** (verificato con la firma digitale
+  di Intel) e **OptiScaler** (verificato con l'impronta SHA-256 pubblicata da GitHub).
+- Legge i contatori di Windows, il driver della scheda video, il Registro eventi e, se
+  aperti, i valori pubblicati da HWiNFO o LibreHardwareMonitor.
+- Tutti i dati restano in `Documenti\BlackBox`. I CSV più vecchi di 14 giorni vengono
+  cancellati da soli.
 
 ## Requisiti
 
-- Windows 10 o 11, 64 bit.
-- .NET Framework 4.x (già incluso in Windows).
-- Non servono privilegi di amministratore.
+- Windows 10 o 11, 64 bit, con .NET Framework 4.x (già incluso in Windows).
+- **Non servono privilegi di amministratore.** Unica eccezione facoltativa: per gli FPS
+  Windows può chiedere **una volta** di aggiungere il tuo utente al gruppo
+  *Performance Log Users* (su molti PC il permesso c'è già).
+- Facoltativi: **HWiNFO** con la memoria condivisa (temperatura della CPU),
+  **7-Zip** (non serve: Windows apre da solo gli archivi di OptiScaler).
 
 ## Installazione
 
-1. Scarica `BlackBox.exe` dalla pagina **[Releases](../../releases)**.
-2. Mettilo in una cartella permanente (es. `C:\Programmi\BlackBox` o `Documenti\BlackBox-app`).
-3. Avvialo. Per registrare anche dopo i riavvii, attiva **"Avvio automatico"** dall'interfaccia.
+Scarica dalla pagina **[Releases](../../releases)**:
 
-> Windows SmartScreen potrebbe mostrare un avviso perché l'exe non è firmato digitalmente: clicca **Ulteriori informazioni → Esegui comunque**, oppure compilalo tu dal sorgente.
+- **`BlackBox-Setup-1.2.0.exe`** (consigliato): installa BlackBox per il tuo utente
+  in `%LocalAppData%\Programs\BlackBox`, **senza amministratore**, con collegamento nel
+  menu Start, avvio automatico e disinstallazione da *Impostazioni → App*. Se BlackBox
+  è già installato lo aggiorna e tiene i tuoi dati.
+- oppure **`BlackBox.exe`** da solo (versione portatile): mettilo in una cartella fissa e
+  attiva *Avvio automatico* dalla finestra.
+
+> Windows SmartScreen può mostrare un avviso perché i file non sono firmati
+> digitalmente: **Ulteriori informazioni → Esegui comunque**, oppure compila tu dal
+> sorgente.
 
 ## Compilare dal sorgente
 
@@ -69,38 +122,60 @@ Nessuna dipendenza da scaricare: usa il compilatore C# incluso in Windows.
 powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-L'eseguibile viene creato in `dist\BlackBox.exe`.
+Crea `dist\BlackBox.exe` e l'installer `dist\BlackBox-Setup-<versione>.exe`.
 
 ## Uso
 
-La guida completa, passo passo, è in **[GUIDA.md](GUIDA.md)** e si apre anche dal programma (pulsante **Guida** o tasto destro sull'icona → **Guida**).
+La guida completa, passo passo, è in **[GUIDA.md](GUIDA.md)** e si apre anche dal
+programma (pulsante **Guida**).
 
 | Azione | Effetto |
 |---|---|
-| Chiudi / riduci a icona la finestra | va nell'area di notifica e **continua a registrare** |
-| Clic sinistro sull'icona | riapre la finestra |
-| Clic destro sull'icona | menu: apri, ultimo report, cartella log, guida, esci |
-| **Esci** dal menu | ferma davvero la registrazione |
+| Chiudi la finestra | va nell'area di notifica e **continua a registrare** |
+| Clic sull'icona | riapre la finestra |
+| Tasto destro sull'icona | report, sessioni, Giochi & OptiScaler, overlay, guida, esci |
+| **Ctrl + Shift + O** | overlay acceso/spento, anche in gioco |
 
-Opzioni da riga di comando:
-
-- `--tray`: avvia direttamente nell'area di notifica (usato dall'avvio automatico).
-- `--logdir <cartella>`: usa una cartella dati diversa da `Documenti\BlackBox`.
+Opzioni da riga di comando: `--tray` (parte nell'area di notifica), `--logdir <cartella>`
+(cartella dati diversa), `--exit` (chiude BlackBox già aperto).
 
 ### File generati (in `Documenti\BlackBox`)
 
 | File | Contenuto |
 |---|---|
-| `monitor_AAAA-MM-GG.csv` | un campione al secondo (separatore `;`) |
-| `eventi.log` | eventi di sistema rilevati |
+| `monitor_AAAA-MM-GG.csv` | un campione al secondo (separatore `;`; colonne nuove sempre in coda) |
+| `eventi.log` | eventi rilevati |
 | `crash_AAAAMMGG_HHMMSS.txt` | report di ogni spegnimento anomalo |
-| `configurazioni.log` | storico delle configurazioni per il test A/B |
+| `sessione_<gioco>_<data>.txt` | report di ogni partita |
+| `sessioni.csv` | una riga per partita (FPS, FPS reali, FPS/W, temperature, crash...) |
+| `configurazioni.log` | configurazioni del test A/B |
+| `impostazioni.ini` | impostazioni (overlay, valori imparati) |
+| `tools\` | PresentMon, se scaricato |
+| `optiscaler\` | pacchetti OptiScaler scaricati |
 
 ## Limiti
 
-- La **temperatura della CPU** non viene letta: richiederebbe privilegi di amministratore o un driver di terze parti.
-- I sensori della GPU funzionano con schede **AMD** e **NVIDIA**. Con altre schede vengono registrati solo carico e VRAM.
-- La diagnosi è un'indicazione basata su regole, non una certezza: confronta più report e usa il test A/B cambiando una cosa alla volta.
+- L'overlay non appare nei giochi in **schermo intero esclusivo**: usa *finestra senza
+  bordi*.
+- La **temperatura della CPU** richiede HWiNFO (memoria condivisa; nella versione
+  gratuita si spegne dopo 12 ore) o LibreHardwareMonitor aperti.
+- L'**AFMF** del driver AMD non è visibile ai programmi esterni: lì gli FPS sono quelli
+  del gioco.
+- OptiScaler **non si installa nei giochi con anti-cheat** e nelle cartelle protette
+  (Programmi) se servirebbe l'amministratore.
+- La diagnosi è un'indicazione basata su regole, non una certezza.
+
+## Programmi di terze parti
+
+BlackBox **non include** questi programmi: li scarica, solo su tua richiesta, dalle
+loro release ufficiali.
+
+| Programma | Autore | Licenza | Pagina |
+|---|---|---|---|
+| PresentMon | Intel (GameTechDev) | MIT | https://github.com/GameTechDev/PresentMon |
+| OptiScaler | progetto OptiScaler | GPL-3.0 | https://github.com/optiscaler/OptiScaler |
+
+HWiNFO e LibreHardwareMonitor, se li usi, si installano a parte.
 
 ## Licenza
 

@@ -56,3 +56,20 @@ $exe = Join-Path $dist 'BlackBox.exe'
     "/resource:$src\MainWindow.xaml,MainWindow.xaml" "/resource:$icoPath,app.ico" "/resource:$root\GUIDA.md,GUIDA.md" @refs (Get-ChildItem "$src\*.cs" | ForEach-Object FullName)
 if ($LASTEXITCODE -ne 0) { throw "Compilazione fallita" }
 "OK -> $exe"
+
+# ---- installer (senza amministratore): contiene BlackBox.exe; versione presa da src\App.cs
+$ver = [regex]::Match((Get-Content "$src\App.cs" -Raw), 'AssemblyVersion\("(\d+)\.(\d+)\.(\d+)').Groups | Select-Object -Skip 1 | ForEach-Object Value
+$ver = $ver -join '.'
+$verCs = Join-Path $obj 'SetupVersion.cs'
+@"
+using System.Reflection;
+[assembly: AssemblyTitle("Installazione di BlackBox $ver")]
+[assembly: AssemblyProduct("BlackBox")]
+[assembly: AssemblyVersion("$ver.0")]
+[assembly: AssemblyFileVersion("$ver.0")]
+"@ | Set-Content $verCs -Encoding UTF8
+$setup = Join-Path $dist "BlackBox-Setup-$ver.exe"
+& "$fw\csc.exe" /nologo /target:winexe /platform:x64 /optimize+ /codepage:65001 "/out:$setup" "/win32icon:$icoPath" "/resource:$exe,BlackBox.exe" @refs `
+    "$root\setup\Setup.cs" $verCs
+if ($LASTEXITCODE -ne 0) { throw "Compilazione dell'installer fallita" }
+"OK -> $setup"

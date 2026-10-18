@@ -24,7 +24,10 @@ using SD = System.Drawing;
 
 [assembly: AssemblyTitle("BlackBox")]
 [assembly: AssemblyProduct("BlackBox")]
-[assembly: AssemblyVersion("1.1.1.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyFileVersion("1.2.0.0")]
+[assembly: AssemblyInformationalVersion("1.2.0")]
+[assembly: AssemblyDescription("BlackBox - la scatola nera del PC, fatta per giocare")]
 
 namespace BlackBox
 {
@@ -34,6 +37,13 @@ namespace BlackBox
         public static int Main(string[] args)
         {
             bool tray = args.Contains("--tray");
+            if (args.Contains("--exit"))
+            {
+                // chiude con garbo un BlackBox gia' aperto (lo usa l'installer prima di aggiornare)
+                EventWaitHandle ev;
+                if (EventWaitHandle.TryOpenExisting(@"Local\BlackBoxApp_Exit", out ev)) { ev.Set(); ev.Dispose(); }
+                return 0;
+            }
             string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "BlackBox");
             string snapshot = null;
             for (int i = 0; i < args.Length - 1; i++)
@@ -123,7 +133,7 @@ namespace BlackBox
 
             col = new Collector(logDir);
             col.Start();
-            F<TextBlock>("SubTitle").Text = "Registrazione su disco ogni secondo  •  100% locale, internet solo per i download che avvii tu  •  " + logDir;
+            F<TextBlock>("SubTitle").Text = "v" + Version + "  •  Registrazione su disco ogni secondo  •  100% locale, internet solo per i download che avvii tu  •  " + logDir;
 
             if (snapshot == null) overlay = new Overlay(col);
             LoadPastEvents();
@@ -160,6 +170,11 @@ namespace BlackBox
             win.IsVisibleChanged += (s, e) => { col.WindowHidden = !win.IsVisible; if (!win.IsVisible) Collector.TrimMemory(); };
             win.Closing += (s, e) => { if (!exiting) { e.Cancel = true; HideToTray(); } };
             app.SessionEnding += (s, e) => { exiting = true; col.Stop("Windows in arresto: BlackBox chiuso"); tray.Visible = false; };
+
+            // ---- richiesta di chiusura da un altro processo (installer: BlackBox.exe --exit)
+            var exitEvt = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\BlackBoxApp_Exit");
+            var te = new Thread(() => { exitEvt.WaitOne(); app.Dispatcher.BeginInvoke(new Action(() => { if (!exiting) Exit(); })); });
+            te.IsBackground = true; te.Start();
 
             // ---- una seconda apertura dell'exe mostra questa finestra
             var t = new Thread(() => { while (true) { showEvt.WaitOne(); app.Dispatcher.BeginInvoke(new Action(ShowWindow)); } });
@@ -486,6 +501,7 @@ namespace BlackBox
         }
 
         static string ExePath { get { return Assembly.GetExecutingAssembly().Location; } }
+        public static string Version { get { var v = Assembly.GetExecutingAssembly().GetName().Version; return v.Major + "." + v.Minor + "." + v.Build; } }
 
         bool AutoStartOn()
         {

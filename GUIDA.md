@@ -33,15 +33,24 @@ programma: pulsante **Guida** in alto, oppure tasto destro sull'icona → **Guid
 
 ## 1. Primo avvio
 
-1. Metti `BlackBox.exe` in una cartella fissa (non in Download, non sul desktop).
-2. Fai doppio clic. Se Windows mostra un avviso blu: **Ulteriori informazioni → Esegui comunque**.
-3. Clicca **Avvio automatico: OFF** finché diventa **ON**: così BlackBox parte da
-   solo a ogni accensione e non perde nessuno spegnimento.
+**Con l'installer (consigliato):**
 
-Non servono permessi di amministratore e non si installa niente.
+1. Fai doppio clic su `BlackBox-Setup-<versione>.exe`. Se Windows mostra un avviso
+   blu: **Ulteriori informazioni → Esegui comunque**.
+2. Lascia le spunte come sono e premi **Installa**. BlackBox si installa solo per il
+   tuo utente, **senza permessi di amministratore**, in
+   `%LocalAppData%\Programs\BlackBox`, con il collegamento nel menu Start e l'avvio
+   automatico con Windows.
+3. Per aggiornare basta aprire l'installer della versione nuova: chiude BlackBox, lo
+   aggiorna e tiene i tuoi dati.
+4. Per disinstallare: **Impostazioni → App → BlackBox → Disinstalla**. I tuoi dati in
+   `Documenti\BlackBox` restano.
 
-> Se sposti `BlackBox.exe` in un'altra cartella, apri il programma e rimetti
-> **Avvio automatico** su OFF e poi di nuovo su ON, così Windows sa dove trovarlo.
+**Versione portatile:** metti `BlackBox.exe` in una cartella fissa (non in Download),
+aprilo e clicca **Avvio automatico: OFF** finché diventa **ON**. Se poi sposti l'exe,
+rimetti *Avvio automatico* su OFF e di nuovo su ON.
+
+Al primo avvio BlackBox mostra cosa ha riconosciuto del tuo PC (punto 15).
 
 ## 2. La finestra
 
