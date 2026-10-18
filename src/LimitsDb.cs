@@ -95,7 +95,15 @@ namespace BlackBox
         // pulsante «Aggiorna i limiti»: scarica la tabella dal repository di BlackBox su GitHub (solo su richiesta)
         public static string Update()
         {
-            string json = Net.GetText(UpdateUrl);
+            string json;
+            try { json = Net.GetText(UpdateUrl); }
+            catch (System.Net.WebException ex)
+            {
+                var resp = ex.Response as System.Net.HttpWebResponse;
+                if (resp != null && resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    throw new Exception("la tabella non è raggiungibile sul sito di BlackBox (il repository non è pubblico). Restano validi i limiti già presenti nel programma");
+                throw new Exception("nessuna connessione con GitHub (" + ex.Message + "). Restano validi i limiti già presenti nel programma");
+            }
             string v = VersionOf(json);
             if (v == "") throw new Exception("il file scaricato non è una tabella dei limiti valida");
             if (string.CompareOrdinal(v, Version) <= 0) return "Hai già la tabella più recente (" + Version + ").";

@@ -264,11 +264,20 @@ Il confronto funziona solo se c'è almeno una partita registrata prima del crash
 Per leggere la temperatura vera della CPU (Tctl/Tdie) servirebbe un driver speciale,
 che BlackBox volutamente non installa. La prende quindi da **HWiNFO**, se è aperto:
 
-1. Apri HWiNFO64 e scegli **Sensors only** (solo sensori).
-2. Nella finestra dei sensori clicca l'ingranaggio **Settings** (in basso).
-3. Metti la spunta su **Shared Memory Support** e premi **OK**.
-4. Dopo qualche secondo nel riquadro della CPU di BlackBox compare la temperatura.
+HWiNFO può essere in italiano o in inglese: qui trovi tutti e due i nomi.
 
+1. Apri HWiNFO64 e scegli **Solo sensori** (*Sensors only*).
+2. In basso nella finestra dei sensori clicca l'**ingranaggio**: si apre
+   **Impostazioni sensori** (*Sensor Settings*).
+3. In quella finestra, in basso a destra, clicca **Impostazioni principali**
+   (*Main Settings*).
+4. Nella prima scheda, **Generale / Interfaccia utente** (*General / User Interface*),
+   metti la spunta su **Supporto memoria condivisa** (*Shared Memory Support*).
+5. Premi **OK**, poi di nuovo **OK** nella finestra *Impostazioni sensori*.
+6. Dopo qualche secondo nel riquadro della CPU di BlackBox compare la temperatura.
+
+In BlackBox, nel *Controllo stato*, il pulsante **Mostrami come** accanto a HWiNFO
+mostra questi stessi passi.
 Nella versione gratuita di HWiNFO la memoria condivisa si spegne da sola dopo
 12 ore: se la temperatura torna "n/d", rimetti la spunta.
 

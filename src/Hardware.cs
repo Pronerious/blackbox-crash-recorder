@@ -256,15 +256,17 @@ namespace BlackBox
                     try { Process.Start("https://www.hwinfo.com/download/"); } catch { }
                     return "Pagina di HWiNFO aperta nel browser: scegli «Installer» (gratuito), installalo e aprilo.";
                 case "hwinfo-sm":
-                    MessageBox.Show(owner, "Accendere la memoria condivisa di HWiNFO (una volta sola):\n\n" +
-                        "1.  Apri la finestra di HWiNFO: clic sulla sua icona vicino all'orologio (freccetta ^ se non la vedi).\n" +
-                        "2.  Nella finestra dei sensori, in basso, clicca l'INGRANAGGIO (Settings).\n" +
-                        "3.  Nella scheda «General / User Interface» metti la spunta su «Shared Memory Support».\n" +
-                        "4.  Premi OK.\n\n" +
+                    MessageBox.Show(owner, "Accendere la memoria condivisa di HWiNFO (una volta sola).\n" +
+                        "HWiNFO può essere in italiano o in inglese: trovi tutti e due i nomi.\n\n" +
+                        "1.  Apri la finestra dei sensori di HWiNFO: clic sulla sua icona vicino all'orologio (freccetta ^ se non la vedi).\n" +
+                        "2.  In basso nella finestra dei sensori clicca l'INGRANAGGIO: si apre «Impostazioni sensori» (Sensor Settings).\n" +
+                        "3.  In quella finestra, in basso a destra, clicca «Impostazioni principali» (Main Settings).\n" +
+                        "4.  Nella prima scheda, «Generale / Interfaccia utente» (General / User Interface), metti la spunta su\n" +
+                        "     «Supporto memoria condivisa» (Shared Memory Support).\n" +
+                        "5.  Premi OK, poi di nuovo OK nella finestra «Impostazioni sensori».\n\n" +
                         "Dopo pochi secondi la temperatura della CPU compare in BlackBox.\n" +
-                        "Nota: nella versione gratuita di HWiNFO la memoria condivisa si spegne dopo 12 ore: se la temperatura torna «n/d», rimetti la spunta.",
-                        "HWiNFO — memoria condivisa", MessageBoxButton.OK, MessageBoxImage.Information);
-                    return "Quando hai messo la spunta, la temperatura della CPU compare da sola.";
+                        "Nota: nella versione gratuita di HWiNFO la memoria condivisa si spegne da sola dopo 12 ore: se la temperatura torna «n/d», rimetti la spunta.",
+                        "HWiNFO — memoria condivisa", MessageBoxButton.OK, MessageBoxImage.Information);                    return "Quando hai messo la spunta, la temperatura della CPU compare da sola.";
                 case "taskmgr":
                     try { Process.Start("taskmgr.exe"); } catch { }
                     return "";
