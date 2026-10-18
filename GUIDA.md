@@ -28,6 +28,7 @@ programma: pulsante **Guida** in alto, oppure tasto destro sull'icona → **Guid
 14. [Controllo dello stato e UV/OC](#14-controllo-dello-stato-e-uvoc)
 15. [Il tuo PC: riconoscimento automatico](#15-il-tuo-pc-riconoscimento-automatico)
 16. [Giochi & OptiScaler](#16-giochi--optiscaler)
+17. [Le parole difficili, spiegate](#17-le-parole-difficili-spiegate)
 
 ---
 
@@ -296,10 +297,24 @@ Da lì in poi, mentre giochi la riga *FPS* mostra:
   lenti). Se è molto più basso degli FPS, il gioco "scatta" anche se la media è alta;
 - **ms**: il tempo medio di un fotogramma (frame time).
 
-Il **1% low** è rosso sotto i 30, arancione sotto i 50. Un 1% low molto basso vuol dire
-scatti veri (caricamenti, memoria video piena, shader in compilazione). Quando il gioco
-è in secondo piano (Alt+Tab) i suoi fotogrammi non contano, e al ritorno il calcolo
-riparte pulito.
+Il **1% low** è rosso sotto i 30, arancione sotto i 50. Quando il gioco è in secondo
+piano (Alt+Tab) i suoi fotogrammi non contano, e al ritorno il calcolo riparte pulito.
+
+**1% low basso: perché e cosa fare.** Se il gioco scatta (o va lento), BlackBox guarda
+l'ultimo minuto e nel *Controllo stato* (e nell'ultima riga dell'overlay) ti dice la
+causa più probabile e la soluzione:
+
+| Cosa vede BlackBox | Causa | Cosa fare |
+|---|---|---|
+| partita iniziata da meno di 3 minuti | compilazione degli shader, caricamenti | niente: è normale e di solito sparisce dopo qualche minuto |
+| memoria video quasi piena | VRAM piena | abbassa di un livello la qualità delle texture |
+| la scheda rallenta per il calore | throttling termico | più aria: filtri puliti, ventole più alte, pasta termica |
+| RAM quasi piena | memoria del sistema piena | chiudi browser, launcher e programmi che non servono |
+| un programma pesante in background | CPU rubata al gioco | chiudilo da Gestione attività (Ctrl + Maiusc + Esc) |
+| un core del processore al massimo, scheda video sotto il 90% | processore al limite | abbassa folla, distanza visiva, fisica, ray tracing; un limite agli FPS poco sotto la media aiuta |
+| generazione di fotogrammi con meno di 60 FPS veri | pochi fotogrammi di partenza | abbassa la qualità o l'upscaler finché gli FPS veri superano 60 |
+| scheda video al 95-100% e FPS bassi | scheda video al massimo | abbassa qualità o risoluzione, o usa FSR / XeSS in Qualità o Bilanciato |
+| nessuna di queste | picchi isolati | limita gli FPS poco sotto la media (nel gioco o con Radeon Chill) |
 
 FPS medio e 1% low dell'intera partita finiscono nel report della sessione e in
 `sessioni.csv`.
@@ -507,3 +522,81 @@ OptiScaler (FPS, 1% low, watt). Confronta la stessa scena.
 
 Se OptiScaler era già installato a mano, BlackBox non lo tocca (usa il file
 `Remove_OptiScaler.bat` nella cartella del gioco).
+
+## 17. Le parole difficili, spiegate
+
+Nel *Controllo stato* ogni voce ha il pulsante **Cos'è?** con queste spiegazioni.
+
+**FPS** — fotogrammi al secondo: quante immagini il gioco disegna ogni secondo. Più sono,
+più è fluido.
+
+**1% low** — gli FPS nei momenti peggiori (l'1% dei fotogrammi più lenti dell'ultimo
+minuto). Se è molto più basso della media, il gioco «scatta» anche se la media è alta.
+
+**Frame time** — quanti millisecondi servono per un fotogramma. 16,7 ms = 60 FPS,
+8,3 ms = 120 FPS. Picchi nel grafico = scatti.
+
+**Generazione di fotogrammi** (FSR 3, DLSS Frame Generation, AFMF) — la scheda inventa
+un'immagine intermedia tra due vere: il gioco sembra più fluido, ma la risposta ai
+comandi segue i fotogrammi veri (gli «FPS reali» di BlackBox).
+
+**Upscaler** (FSR, DLSS, XeSS) — il gioco disegna a una risoluzione più bassa e
+l'upscaler la ingrandisce in modo intelligente: molti più FPS con un'immagine quasi
+uguale.
+
+**HAGS** (Pianificazione GPU con accelerazione hardware) — di solito è il processore,
+tramite Windows, a fare da «vigile urbano» per la scheda video, decidendo in che ordine
+esegue i lavori dei programmi. Con HAGS acceso è la scheda video stessa a gestire la sua
+coda. Risultato: un po' meno lavoro per il processore e un po' meno ritardo. Serve
+soprattutto alla generazione di fotogrammi: DLSS 3 di NVIDIA lo richiede, per FSR 3 e
+OptiScaler è consigliato. Non fa danni, vale dopo un riavvio e si spegne da Impostazioni
+→ Sistema → Schermo → Grafica.
+
+**Modalità gioco** — funzione di Windows che, mentre giochi, dà la precedenza al gioco e
+rimanda i lavori in background (per esempio gli aggiornamenti).
+
+**Temperatura edge e hotspot** — *edge* è la temperatura media della superficie del chip
+della scheda video, *hotspot* il suo punto più caldo. Le schede reggono temperature alte
+per progetto: le Radeon recenti fino a 110 °C di hotspot.
+
+**Differenza hotspot − edge** — dice quanto bene il dissipatore tocca il chip. Se cresce
+molto rispetto al solito, la pasta termica si sta seccando o il dissipatore non appoggia
+bene.
+
+**Tctl/Tdie** — la temperatura del processore che il processore stesso usa per
+proteggersi: se arriva al limite del modello (es. 89 °C per il 7800X3D) rallenta da solo.
+
+**Throttling** — la scheda video (o il processore) rallenta da sola per non superare un
+limite di temperatura o di potenza. Per il calore è da sistemare; per il limite di
+potenza è normale con un undervolt.
+
+**Undervolt (UV) / overclock (OC)** — far lavorare la scheda con meno tensione (scalda e
+consuma meno) o più veloce. Se si esagera diventa instabile.
+
+**TDR** — il driver della scheda video si blocca e Windows lo riavvia: schermo nero per
+un attimo o gioco chiuso. Spesso è un UV/OC troppo spinto.
+
+**FPS per watt** — FPS veri divisi per i watt della scheda: più è alto, meglio funziona
+l'undervolt. Confronta sempre la stessa scena.
+
+**VRAM** — la memoria della scheda video. I giochi la riempiono di proposito: è un
+problema solo se intanto il gioco scatta.
+
+**RAM impegnata** — quanta memoria del sistema hanno chiesto i programmi aperti. Vicino
+al 100% tutto rallenta.
+
+**Core** — uno dei «motori» del processore (il 7800X3D ne ha 8, con 16 thread).
+
+**Anti-cheat** — programma dei giochi online che controlla che nessuno bari. Vede anche
+mod innocue come OptiScaler e può bannare l'account.
+
+**PresentMon** — programma gratuito di Intel che misura FPS e frame time con precisione.
+
+**HWiNFO** — programma gratuito che legge tutti i sensori del PC; la sua *memoria
+condivisa* permette a BlackBox di leggere la temperatura del processore.
+
+**Performance Log Users** — gruppo di Windows che permette di leggere gli eventi della
+grafica: serve per gli FPS. Si chiede una volta.
+
+**Integrità della memoria** — protezione di Windows contro driver malevoli. Può togliere
+qualche FPS, ma è una scelta di sicurezza: BlackBox non la tocca.

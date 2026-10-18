@@ -197,7 +197,7 @@ namespace BlackBox
                     { k.SetValue("AutoGameModeEnabled", 1, RegistryValueKind.DWord); k.SetValue("AllowAutoGameMode", 1, RegistryValueKind.DWord); }
                     return "Modalità gioco accesa.";
                 case "hags":
-                    if (MessageBox.Show(owner, "Accendo la «Pianificazione GPU con accelerazione hardware» (HAGS).\n\nWindows ti chiederà una conferma da amministratore: premi Sì.\nDopo bisogna riavviare il PC perché valga.\n\nProcedo?",
+                    if (MessageBox.Show(owner, "COS'È\n" + Glossary.Hags + "\n\nCOSA SUCCEDE ORA\n•  Windows ti chiederà una conferma da amministratore: premi Sì.\n•  Poi bisogna riavviare il PC perché valga.\n•  Se un giorno vuoi spegnerlo: Impostazioni → Sistema → Schermo → Grafica.\n\nAccendo HAGS?",
                                         "Accendi HAGS", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return "";
                     try
                     {

@@ -89,20 +89,33 @@ namespace BlackBox
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(26) });
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             var icon = new TextBlock { Text = it.Level >= 2 ? "✖" : it.Level == 1 ? "⚠" : it.Level == 0 ? "✔" : "ℹ", FontSize = 14,
                                        Foreground = it.Level >= 2 ? Red : it.Level == 1 ? Orange : it.Level == 0 ? Green : Blue };
             var txt = new TextBlock { Text = it.Text, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 10, 0), VerticalAlignment = VerticalAlignment.Center };
             Grid.SetColumn(txt, 1);
             g.Children.Add(icon); g.Children.Add(txt);
+            // "Cos'e'?": spiegazione in parole semplici, si apre sotto la voce
+            string help = Glossary.For(it);
+            TextBlock helpText = null;
+            if (help != null)
+            {
+                helpText = new TextBlock { Text = help, TextWrapping = TextWrapping.Wrap, Foreground = Muted, FontSize = 12.5, Margin = new Thickness(26, 4, 0, 6), Visibility = Visibility.Collapsed };
+                var q = new Button { Content = "Cos'è?", VerticalAlignment = VerticalAlignment.Center, Padding = new Thickness(10, 4, 10, 4) };
+                q.Click += (s, e) => helpText.Visibility = helpText.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+                Grid.SetColumn(q, 2);
+                g.Children.Add(q);
+            }
             if (it.Fix != "")
             {
                 var b = new Button { Content = it.FixLabel == "" ? "Sistema" : it.FixLabel, VerticalAlignment = VerticalAlignment.Center };
                 string fix = it.Fix;
                 b.Click += (s, e) => DoFix(fix);
-                Grid.SetColumn(b, 2);
+                Grid.SetColumn(b, 3);
                 g.Children.Add(b);
             }
             body.Children.Add(g);
+            if (helpText != null) body.Children.Add(helpText);
         }
 
         void DoFix(string fix)

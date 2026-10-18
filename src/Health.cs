@@ -138,7 +138,17 @@ namespace BlackBox
             if (!double.IsNaN(s0.Fps) && !double.IsNaN(s0.Fps1Low))
             {
                 double ratio = s0.Fps1Low / s0.Fps;
-                if (ratio < 0.5 && s0.Fps1Low < 45) add(1, "scatti (1% low " + N(s0.Fps1Low) + ")", "Il gioco scatta: 1% low " + N(s0.Fps1Low) + " contro " + N(s0.Fps) + " FPS. Cause tipiche: VRAM piena, caricamenti, CPU al limite, shader in compilazione.");
+                bool stutter = ratio < 0.5 && s0.Fps1Low < 45;   // scatti: momenti peggiori molto sotto la media
+                bool slow = !stutter && s0.Fps1Low < 30;         // non scatta, ma va lento in generale
+                if (stutter || slow)
+                {
+                    string cause, fix;
+                    StutterCause(col, s0, slow, out cause, out fix);
+                    add(1, (stutter ? "scatti" : "lento") + " (1% low " + N(s0.Fps1Low) + "): " + cause,
+                        (stutter ? "Il gioco scatta: nei momenti peggiori va a " + N(s0.Fps1Low) + " FPS contro una media di " + N(s0.Fps) + "."
+                                 : "Il gioco va lento in generale: " + N(s0.Fps) + " FPS di media, " + N(s0.Fps1Low) + " nei momenti peggiori.") +
+                        "\nCausa più probabile: " + cause + ".\nCosa fare: " + fix);
+                }
                 else add(0, "fluido", "Fluidità ok: 1% low " + N(s0.Fps1Low) + " su " + N(s0.Fps) + " FPS.");
             }
             if (s0.FgFactor > 1 && !double.IsNaN(s0.Fps))
@@ -163,6 +173,37 @@ namespace BlackBox
             // ---- strumenti
             if (playing && double.IsNaN(s0.Fps)) add(-1, "FPS n/d", "FPS non disponibili: " + (Fps.ToolPresent ? (Fps.Status != "" ? Fps.Status : "in attesa dei fotogrammi") : "scarica PresentMon (guida, punto 12)") + ".");
             return r;
+        }
+
+        // Perche' l'1% low e' basso? Guarda l'ultimo minuto e sceglie la causa piu' probabile, con la soluzione.
+        // L'ordine conta: prima le cause certe (inizio partita, memoria piena, calore), poi quelle di "collo di bottiglia".
+        static void StutterCause(Collector col, Sample s0, bool slow, out string cause, out string fix)
+        {
+            var h = col.GetHistory(60);
+            Func<Func<Sample, double>, double> avg = f => { var v = h.Select(f).Where(x => !double.IsNaN(x)).ToList(); return v.Count > 0 ? v.Average() : double.NaN; };
+            var c = col.Games.Current;
+            double vt = VramTotalMb, vram = h.Select(x => x.VramMb).Where(x => !double.IsNaN(x)).DefaultIfEmpty(double.NaN).Max();
+            double coreMax = avg(x => x.CpuCoreMax), gpu = avg(x => x.Gpu3d), ram = avg(x => x.RamCommit);
+            string hogs = col.BackgroundHogs;
+
+            if (c != null && (DateTime.Now - c.Start).TotalMinutes < 3 && !slow)
+            { cause = "inizio partita (compilazione degli shader e caricamenti)"; fix = "è normale nei primi minuti di gioco o dopo un aggiornamento del gioco o del driver: di solito sparisce da solo dopo qualche minuto."; return; }
+            if (!double.IsNaN(vt) && !double.IsNaN(vram) && vram / vt >= 0.95)
+            { cause = "memoria video (VRAM) piena"; fix = "abbassa la qualità delle texture di un livello nelle opzioni grafiche del gioco."; return; }
+            if (c != null && (DateTime.Now - c.LastThrottle).TotalSeconds < 60 && c.LastThrottleThermal)
+            { cause = "la scheda video rallenta per il calore"; fix = "migliora il raffreddamento: pulisci i filtri, alza le ventole del case o della scheda (Adrenalin → Prestazioni → Ottimizzazione), controlla la pasta termica."; return; }
+            if (!double.IsNaN(ram) && ram >= 90)
+            { cause = "memoria del sistema (RAM) quasi piena"; fix = "chiudi i programmi che non servono mentre giochi (browser con tante schede, launcher, programmi di registrazione)."; return; }
+            if (hogs != "")
+            { cause = "un programma in background usa molto il processore (" + hogs + ")"; fix = "se non ti serve, chiudilo da Gestione attività (Ctrl + Maiusc + Esc)."; return; }
+            if (!double.IsNaN(coreMax) && !double.IsNaN(gpu) && coreMax >= 90 && gpu < 90)
+            { cause = "processore al limite (la scheda video aspetta il processore)"; fix = "abbassa le opzioni che pesano sul processore (densità della folla, distanza visiva, fisica, ray tracing), chiudi i programmi in background; un limite agli FPS poco sotto la media rende tutto più regolare."; return; }
+            if (s0.FgFactor > 1 && !double.IsNaN(s0.FpsReal) && s0.FpsReal < 60)
+            { cause = "generazione di fotogrammi con pochi FPS veri (" + Math.Round(s0.FpsReal) + ")"; fix = "la generazione di fotogrammi funziona bene sopra i 60 FPS veri: abbassa la qualità grafica o l'upscaler (Qualità → Bilanciato) finché gli FPS reali superano 60."; return; }
+            if (slow && !double.IsNaN(gpu) && gpu >= 95)
+            { cause = "scheda video al massimo"; fix = "abbassa la qualità grafica o la risoluzione, oppure usa un upscaler (FSR / XeSS) in modalità Qualità o Bilanciato."; return; }
+            cause = "picchi isolati (caricamenti di zone nuove, effetti pesanti)";
+            fix = "se succede spesso, imposta un limite agli FPS poco sotto la media (nel gioco o con Radeon Chill in Adrenalin): i picchi si sentono molto meno.";
         }
 
         // riassunto: livello peggiore e frase breve
