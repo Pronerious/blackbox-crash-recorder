@@ -30,10 +30,14 @@ namespace BlackBox
             thread.Start();
         }
 
+        // HWiNFO gratuito spegne la memoria condivisa dopo 12 ore: ricordo quando l'ho vista l'ultima volta
+        public static DateTime HwinfoLastSeen = DateTime.MinValue;
+
         static void Set(double v, string src, string label)
         {
             Interlocked.Exchange(ref valueBits, BitConverter.DoubleToInt64Bits(v));
             Source = src; Label = label;
+            if (src == "HWiNFO") HwinfoLastSeen = DateTime.Now;
         }
 
         static void Run()

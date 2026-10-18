@@ -211,10 +211,25 @@ namespace BlackBoxSetup
                                     "Disinstalla BlackBox", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (q != MessageBoxResult.Yes) return 0;
             RemoveInstalled(dir, false);
+            RemoveHwinfoTask();
             if (!quiet) MessageBox.Show("BlackBox è stato disinstallato.", "BlackBox", MessageBoxButton.OK, MessageBoxImage.Information);
             return 0;
         }
 
+        // operazione pianificata "riavvio automatico di HWiNFO" (creata da BlackBox su richiesta): si toglie solo disinstallando
+        static void RemoveHwinfoTask()
+        {
+            const string task = @"BlackBox\Riavvia HWiNFO";
+            try
+            {
+                var q = new ProcessStartInfo("schtasks.exe", "/Query /TN \"" + task + "\"") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+                using (var p = Process.Start(q)) { p.StandardOutput.ReadToEnd(); p.WaitForExit(10000); if (p.ExitCode != 0) return; }
+                // e' stata creata come amministratore: per toglierla Windows chiede la conferma
+                var d = new ProcessStartInfo("schtasks.exe", "/Delete /F /TN \"" + task + "\"") { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden };
+                using (var p = Process.Start(d)) p.WaitForExit(30000);
+            }
+            catch { }
+        }
         // toglie un'installazione: programma chiuso, avvio automatico, collegamenti, voce in App, file del programma.
         // I dati in Documenti\BlackBox non vengono mai toccati. anyAutoStart: toglie anche l'avvio automatico di una copia portatile.
         static void RemoveInstalled(string dir, bool anyAutoStart)

@@ -23,7 +23,8 @@ namespace BlackBox
         public const string Hwinfo =
             "HWiNFO è un programma gratuito che legge tutti i sensori del PC, compresa la temperatura vera del processore. " +
             "BlackBox non può leggerla da solo (servirebbe installare un «driver» speciale nel sistema, cosa che volutamente non fa) e quindi la chiede a HWiNFO.\n" +
-            "La «memoria condivisa» («Supporto memoria condivisa», in inglese Shared Memory Support) è il permesso che HWiNFO dà agli altri programmi di leggere i suoi valori. Basta una spunta, una volta sola.";
+            "La «memoria condivisa» («Supporto memoria condivisa», in inglese Shared Memory Support) è il permesso che HWiNFO dà agli altri programmi di leggere i suoi valori. Basta una spunta, una volta sola.\n" +
+            "Attenzione: nella versione gratuita di HWiNFO la memoria condivisa si spegne da sola 12 ore dopo l'avvio di HWiNFO; chiudendo e riaprendo HWiNFO riparte. Senza limite: HWiNFO Pro (a pagamento) o LibreHardwareMonitor (gratuito).";
 
         public const string CpuTemp =
             "La temperatura del processore (Tctl/Tdie) è il valore che il processore usa per proteggersi: se arriva al suo limite rallenta da solo per non scaldare troppo.\n" +

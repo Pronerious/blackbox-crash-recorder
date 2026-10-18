@@ -33,7 +33,7 @@ WPF scura, testi in italiano) che:
 
 Proprietario: non è un programmatore. PC: Ryzen 7 7800X3D, Radeon RX 7800 XT Sapphire Nitro+,
 32 GB, Windows 11. Repository: https://github.com/Pronerious/blackbox-crash-recorder
-(branch `main`). Versione attuale: **1.2.3** (release del 18/10/2026).
+(branch `main`). Versione attuale: **1.2.4** (release del 18/10/2026).
 
 ## Regole fisse
 
@@ -118,8 +118,8 @@ I limiti per modello stanno in `data/limiti.json` (verificati sulle pagine uffic
 - Fatto: tutte le fasi del piano 1.2 (sessioni, temperatura CPU, FPS, overlay, controllo
   stato, OptiScaler, ottimizzazioni, installer), release v1.2.0 e v1.2.1 (benvenuto corretto,
   pulsanti «Sistema», OptiScaler a prova di errore, revisione completa del codice) e v1.2.2 (pulsante «Cos'è?» su ogni voce, causa e soluzione dell'1% low basso, glossario nella guida). L'1% low rosso visto dall'utente il 17/10 era tutto dovuto all'Alt+Tab (nessuno scatto vero).
-- Sul PC dell'utente: **HWiNFO è aperto ma senza memoria condivisa** (la temperatura CPU
-  resta n/d finché non spunta *Shared Memory Support*); **HAGS è spento** (conviene
+- Sul PC dell'utente (18/10): HWiNFO con memoria condivisa attiva e **riavvio automatico di HWiNFO** attivo
+  (operazione pianificata «BlackBox\Riavvia HWiNFO», per il limite delle 12 ore della versione gratuita); **HAGS è spento** (conviene
   accenderlo per la generazione di fotogrammi).
 - Il vecchio script «Monitor Spegnimenti» in Esecuzione automatica è stato tolto (collegamento
   nel Cestino) il 18/10.

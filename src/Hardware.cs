@@ -175,11 +175,20 @@ namespace BlackBox
             bool hwinfo = Process.GetProcessesByName("HWiNFO64").Length > 0 || Process.GetProcessesByName("HWiNFO32").Length > 0;
             bool lhm = Process.GetProcessesByName("LibreHardwareMonitor").Length > 0;
             if (CpuTemp.Source != "") add(0, "temperatura CPU", "Temperatura della CPU letta da " + CpuTemp.Source + ".", null, null);
+            else if (hwinfo && CpuTemp.HwinfoLastSeen != DateTime.MinValue)
+                // la temperatura c'era e non c'e' piu', con HWiNFO ancora aperto: e' il limite delle 12 ore della versione gratuita
+                add(1, "HWiNFO: finite le 12 ore", "HWiNFO ha smesso di condividere i dati alle " + CpuTemp.HwinfoLastSeen.ToString("HH:mm") +
+                    ": nella versione gratuita la memoria condivisa si spegne da sola 12 ore dopo l'avvio di HWiNFO. Per riaverla chiudi HWiNFO e riaprilo. " +
+                    "Per non avere più il limite: HWiNFO Pro (a pagamento) oppure LibreHardwareMonitor (gratuito, senza limite).", "hwinfo-12h", "Mostrami come");
             else if (hwinfo) add(1, "HWiNFO senza memoria condivisa", "HWiNFO è aperto ma non condivide i dati, quindi BlackBox non vede la temperatura della CPU. Basta una spunta in HWiNFO: il pulsante ti mostra dove.", "hwinfo-sm", "Mostrami come");
             else if (lhm) add(-1, "LibreHardwareMonitor", "LibreHardwareMonitor è aperto ma non pubblica i dati: chiudilo e riaprilo come amministratore.", null, null);
             else if (HwinfoExe() != null) add(-1, "HWiNFO chiuso", "Per la temperatura della CPU serve HWiNFO aperto (con la memoria condivisa).", "hwinfo-open", "Apri HWiNFO");
             else add(-1, "temperatura CPU n/d", "Per la temperatura della CPU serve HWiNFO (gratuito). Il pulsante apre la pagina ufficiale per scaricarlo.", "hwinfo-get", "Pagina di HWiNFO");
-            if (Fps.ToolPresent) add(0, "PresentMon", "PresentMon " + Fps.ToolVersion + " presente: FPS attivi nelle sessioni di gioco.", null, null);
+            if (HwinfoExe() != null)
+            {
+                if (HwinfoAutoOn) add(0, "riavvio automatico HWiNFO", "Riavvio automatico di HWiNFO attivo: quando finiscono le 12 ore della versione gratuita, BlackBox lo riavvia da solo (mai durante una partita).", "hwinfo-auto-off", "Disattiva");
+                else add(-1, "riavvio automatico HWiNFO", "Riavvio automatico di HWiNFO spento. Se lo attivi, quando finiscono le 12 ore della versione gratuita BlackBox riavvia HWiNFO da solo (mai durante una partita): niente più temperatura «n/d». Serve una conferma di Windows, una volta sola.", "hwinfo-auto", "Attiva");
+            }            if (Fps.ToolPresent) add(0, "PresentMon", "PresentMon " + Fps.ToolVersion + " presente: FPS attivi nelle sessioni di gioco.", null, null);
             else add(1, "PresentMon mancante", "Senza PresentMon (gratuito, di Intel) BlackBox non può misurare gli FPS.", "presentmon", "Scarica PresentMon");
             if (!Fps.HasPermission) add(1, "permesso FPS", "Manca il permesso di Windows per leggere gli FPS. Il pulsante lo chiede una volta (conferma da amministratore), poi bisogna uscire da Windows e rientrare.", "fpsperm", "Dai il permesso");
             if (HagsOn()) add(0, "HAGS attivo", "Pianificazione GPU con accelerazione hardware (HAGS) attiva: utile per la generazione di fotogrammi.", null, null);
@@ -225,6 +234,92 @@ namespace BlackBox
             return null;
         }
 
+        // ------------------------------------------------ riavvio automatico di HWiNFO (limite 12 ore della versione gratuita)
+        // HWiNFO gira come amministratore: un programma normale non puo' chiuderlo ne' riaprirlo senza la richiesta di Windows.
+        // Con il consenso dell'utente (una volta) si crea un'operazione pianificata che fa SOLO questo, con il percorso di
+        // HWiNFO in Programmi (non modificabile dai programmi normali). BlackBox poi la avvia quando servono, senza richieste.
+        public const string HwTask = @"BlackBox\Riavvia HWiNFO";
+        public static bool HwinfoAutoOn { get { return Settings.Get("hwinfo_auto", "") == "1" && TaskExists(); } }
+        static DateTime lastHwRestart = DateTime.MinValue, nextTaskCheck = DateTime.MinValue;
+        static bool taskExists;
+
+        static bool TaskExists()
+        {
+            if (DateTime.Now < nextTaskCheck) return taskExists;
+            nextTaskCheck = DateTime.Now.AddMinutes(5);
+            try
+            {
+                var psi = new ProcessStartInfo("schtasks.exe", "/Query /TN \"" + HwTask + "\"") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+                using (var p = Process.Start(psi)) { p.StandardOutput.ReadToEnd(); p.WaitForExit(10000); taskExists = p.ExitCode == 0; }
+            }
+            catch { taskExists = false; }
+            return taskExists;
+        }
+
+        static bool RunElevated(string exe, string args)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo(exe, args) { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden };
+                using (var p = Process.Start(psi)) { p.WaitForExit(30000); return p.ExitCode == 0; }
+            }
+            catch { return false; }   // anche "conferma annullata"
+        }
+
+        static string EnableHwinfoAuto(Window owner)
+        {
+            string exe = HwinfoExe();
+            if (exe == null) return "HWiNFO non trovato.";
+            if (MessageBox.Show(owner, "RIAVVIO AUTOMATICO DI HWiNFO\n\n" +
+                    "Nella versione gratuita di HWiNFO la memoria condivisa si spegne dopo 12 ore. Con questa opzione BlackBox, quando succede, chiude e riapre HWiNFO da solo, così la temperatura della CPU non sparisce mai.\n\n" +
+                    "COSA FA\n" +
+                    "•  Crea un'«operazione pianificata» di Windows che sa fare solo una cosa: chiudere e riaprire HWiNFO (" + exe + ").\n" +
+                    "•  Windows ti chiede una conferma da amministratore, UNA volta sola (perché HWiNFO gira come amministratore).\n" +
+                    "•  Il riavvio avviene solo quando servono le 12 ore e mai durante una partita.\n" +
+                    "•  Si spegne quando vuoi con «Disattiva»; la disinstallazione di BlackBox la toglie.\n\n" +
+                    "Attivo?", "Riavvio automatico di HWiNFO", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return "";
+            // comando dentro l'operazione (nessuno script in cartelle modificabili): chiude HWiNFO, aspetta, lo riapre
+            string tr = "cmd.exe /c taskkill /IM HWiNFO64.exe /F & ping -n 4 127.0.0.1 >nul & start \"\" \"" + exe + "\"";   // ping = pausa di 3 s (timeout non funziona senza finestra)
+            string args = "/Create /F /TN \"" + HwTask + "\" /SC ONCE /SD 01/01/2020 /ST 00:00 /RL HIGHEST /TR \"" + tr.Replace("\"", "\\\"") + "\"";
+            if (tr.Length > 260) return "Percorso di HWiNFO troppo lungo per l'operazione pianificata.";
+            if (!RunElevated("schtasks.exe", args)) return "Riavvio automatico non attivato (conferma annullata o errore).";
+            nextTaskCheck = DateTime.MinValue;
+            if (!TaskExists()) return "Riavvio automatico non attivato: l'operazione non risulta creata.";
+            Settings.Set("hwinfo_auto", "1");
+            return "Riavvio automatico di HWiNFO attivo.";
+        }
+
+        static string DisableHwinfoAuto()
+        {
+            RunElevated("schtasks.exe", "/Delete /F /TN \"" + HwTask + "\"");
+            nextTaskCheck = DateTime.MinValue;
+            Settings.Set("hwinfo_auto", "0");
+            return TaskExists() ? "Operazione non tolta (conferma annullata?). Il riavvio automatico resta spento." : "Riavvio automatico di HWiNFO spento.";
+        }
+
+        // chiamato dal registratore ogni ~10 s: se le 12 ore sono finite e non si sta giocando, riavvia HWiNFO
+        public static void CheckHwinfoRestart(Collector col)
+        {
+            if (Settings.Get("hwinfo_auto", "") != "1") return;
+            if (CpuTemp.Source != "" || CpuTemp.HwinfoLastSeen == DateTime.MinValue) return;            // la temperatura c'e' (o non c'e' mai stata)
+            if ((DateTime.Now - CpuTemp.HwinfoLastSeen).TotalSeconds < 30) return;                      // aspetta un po': non e' un attimo di pausa
+            if ((DateTime.Now - lastHwRestart).TotalMinutes < 30) return;                                 // al massimo un tentativo ogni 30 minuti
+            if (col.Games.InSession) return;                                                             // mai durante una partita
+            if (Process.GetProcessesByName("HWiNFO64").Length == 0) return;                              // chiuso dall'utente: non lo riapro io
+            lastHwRestart = DateTime.Now;
+            try
+            {
+                var psi = new ProcessStartInfo("schtasks.exe", "/Run /TN \"" + HwTask + "\"") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+                using (var p = Process.Start(psi))
+                {
+                    p.StandardOutput.ReadToEnd(); p.WaitForExit(10000);
+                    col.AddEvent(p.ExitCode == 0 ? "INFO" : "WARN", p.ExitCode == 0
+                        ? "HWiNFO riavviato da solo: era finito il limite delle 12 ore della versione gratuita"
+                        : "Riavvio automatico di HWiNFO non riuscito: riattivalo dal Controllo stato");
+                }
+            }
+            catch { }
+        }
         // ------------------------------------------------ pulsante "Sistema": esegue la correzione, restituisce cosa e' successo
         public static string ApplyFix(string fix, Window owner)
         {
@@ -267,7 +362,21 @@ namespace BlackBox
                         "Dopo pochi secondi la temperatura della CPU compare in BlackBox.\n" +
                         "Nota: nella versione gratuita di HWiNFO la memoria condivisa si spegne da sola dopo 12 ore: se la temperatura torna «n/d», rimetti la spunta.",
                         "HWiNFO — memoria condivisa", MessageBoxButton.OK, MessageBoxImage.Information);                    return "Quando hai messo la spunta, la temperatura della CPU compare da sola.";
-                case "taskmgr":
+                case "hwinfo-auto": return EnableHwinfoAuto(owner);
+                case "hwinfo-auto-off": return DisableHwinfoAuto();
+                case "hwinfo-12h":
+                    MessageBox.Show(owner, "Il limite delle 12 ore di HWiNFO (versione gratuita)\n\n" +
+                        "Nella versione gratuita, 12 ore dopo l'avvio di HWiNFO la memoria condivisa si spegne da sola: BlackBox non vede più la temperatura della CPU. Non è un guasto.\n\n" +
+                        "PER RIAVERLA SUBITO\n" +
+                        "1.  Tasto destro sull'icona di HWiNFO vicino all'orologio → Esci (Exit).\n" +
+                        "2.  Riapri HWiNFO dal menu Start e scegli «Solo sensori» (Sensors only).\n" +
+                        "3.  Se la temperatura non torna, controlla che la spunta «Supporto memoria condivisa» sia ancora messa (pulsante «Mostrami come» dell'altra voce).\n\n" +
+                        "SE SPEGNI IL PC OGNI GIORNO quasi non te ne accorgi: a ogni avvio le 12 ore ripartono.\n\n" +
+                        "PER NON AVERE PIÙ IL LIMITE\n" +
+                        "•  HWiNFO Pro (a pagamento), oppure\n" +
+                        "•  LibreHardwareMonitor: gratuito, senza limite di tempo, BlackBox lo legge già. Va aperto come amministratore; dalle sue opzioni lo puoi far partire con Windows.",
+                        "HWiNFO — limite delle 12 ore", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return "";                case "taskmgr":
                     try { Process.Start("taskmgr.exe"); } catch { }
                     return "";
             }

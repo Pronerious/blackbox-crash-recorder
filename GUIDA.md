@@ -278,10 +278,24 @@ HWiNFO può essere in italiano o in inglese: qui trovi tutti e due i nomi.
 
 In BlackBox, nel *Controllo stato*, il pulsante **Mostrami come** accanto a HWiNFO
 mostra questi stessi passi.
-Nella versione gratuita di HWiNFO la memoria condivisa si spegne da sola dopo
-12 ore: se la temperatura torna "n/d", rimetti la spunta.
+**Il limite delle 12 ore.** Nella versione gratuita di HWiNFO la memoria condivisa si
+spegne da sola **12 ore dopo l'avvio di HWiNFO**: la temperatura della CPU torna «n/d».
+Non è un guasto. BlackBox se ne accorge e te lo dice nel *Controllo stato*.
 
-In alternativa va bene anche **LibreHardwareMonitor** aperto.
+- Per riaverla subito: tasto destro sull'icona di HWiNFO vicino all'orologio → **Esci**
+  (*Exit*), poi riaprilo e scegli **Solo sensori**.
+- Se spegni il PC ogni giorno quasi non te ne accorgi: a ogni avvio le 12 ore ripartono.
+- Per non avere più il limite: **HWiNFO Pro** (a pagamento) oppure
+  **LibreHardwareMonitor** (gratuito, senza limite di tempo).
+- **Oppure lascia fare a BlackBox:** nel *Controllo stato*, alla voce *riavvio
+  automatico HWiNFO*, premi **Attiva** e conferma la richiesta di Windows (una volta
+  sola). Da lì, quando finiscono le 12 ore, BlackBox chiude e riapre HWiNFO da solo,
+  **mai durante una partita** (aspetta che finisca). Funziona tramite un'«operazione
+  pianificata» di Windows che sa fare solo questo; si spegne con **Disattiva** e la
+  disinstallazione di BlackBox la toglie.
+In alternativa va bene anche **LibreHardwareMonitor**: gratuito e senza limite di tempo.
+Va aperto **come amministratore** (tasto destro → *Esegui come amministratore*); dalle sue
+opzioni (*Options → Run On Windows Startup*) lo puoi far partire con Windows.
 Senza nessuno dei due, la temperatura resta "n/d" e tutto il resto funziona.
 
 ## 12. FPS e frame time (con PresentMon)

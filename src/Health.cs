@@ -104,7 +104,9 @@ namespace BlackBox
 
             // ---- temperatura CPU (limite del modello: 7800X3D 89 °C, Ryzen 7000/9000 95 °C per progetto, ...)
             double cpuT = avg(x => x.CpuTctl);
-            if (double.IsNaN(cpuT)) add(-1, "CPU °C n/d", "Temperatura della CPU non disponibile: apri HWiNFO con la memoria condivisa (guida, punto 11).");
+            if (double.IsNaN(cpuT) && CpuTemp.HwinfoLastSeen != DateTime.MinValue)
+                add(-1, "CPU °C n/d (HWiNFO 12 ore)", "Temperatura della CPU sparita alle " + CpuTemp.HwinfoLastSeen.ToString("HH:mm") + ": probabilmente sono finite le 12 ore della versione gratuita di HWiNFO. Chiudi e riapri HWiNFO.");
+            else if (double.IsNaN(cpuT)) add(-1, "CPU °C n/d", "Temperatura della CPU non disponibile: apri HWiNFO con la memoria condivisa (guida, punto 11).");
             else if (cpuT >= Limits.CpuMax) add(2, "CPU al limite " + N(cpuT) + "°", "CPU a " + N(cpuT) + " °C di media: al limite del modello (" + N(Limits.CpuMax) + " °C), sta rallentando per proteggersi. Controlla il dissipatore della CPU.");
             else if (cpuT >= Limits.CpuMax - 4) add(1, "CPU calda " + N(cpuT) + "°", "CPU a " + N(cpuT) + " °C di media: vicina al limite del modello (" + N(Limits.CpuMax) + " °C).");
             else add(0, "CPU ok " + N(cpuT) + "°", "Temperatura CPU ok: " + N(cpuT) + " °C (limite del modello " + N(Limits.CpuMax) + " °C, letta da " + CpuTemp.Source + ").");

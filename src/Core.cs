@@ -246,7 +246,7 @@ namespace BlackBox
         volatile bool pollSoon;
         // legge il Registro eventi entro 5 s (es. il gioco si e' appena chiuso: e' andato in crash?)
         public void PollEventsSoon() { pollSoon = true; }
-        DateTime nextTrim = DateTime.Now.AddMinutes(2);
+        DateTime nextTrim = DateTime.Now.AddMinutes(2), nextHwCheck = DateTime.Now.AddSeconds(30);
 
         // restituisce a Windows la memoria non usata (utile prima di una partita e con la finestra chiusa)
         public static void TrimMemory()
@@ -391,6 +391,7 @@ namespace BlackBox
                 if (pollSoon) { pollSoon = false; if (nextEvPoll > now.AddSeconds(5)) nextEvPoll = now.AddSeconds(5); }
                 if (now >= nextEvPoll) { PollEvents(ref evSince); nextEvPoll = now.AddSeconds(gaming ? 30 : 10); }
                 if (now >= nextTrim) { if (WindowHidden) TrimMemory(); nextTrim = now.AddMinutes(10); }
+                if (now >= nextHwCheck) { try { Hardware.CheckHwinfoRestart(this); } catch { } nextHwCheck = now.AddSeconds(10); }
 
                 if (now >= nextSec)
                 {
