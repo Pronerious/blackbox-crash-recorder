@@ -447,7 +447,45 @@ namespace BlackBox
         }
 
         // proxy consigliato: dxgi.dll; winmm.dll per i giochi Vulkan
-        public static string SuggestedProxy(GameInfo g) { return g.Vulkan && !g.Fsr31 ? "winmm.dll" : "dxgi.dll"; }
+        public static string SuggestedProxy(GameInfo g) { string why; return SuggestedProxy(g, out why); }
+
+        // nome della DLL consigliato per QUESTO gioco, con il perche' in parole semplici
+        public static string SuggestedProxy(GameInfo g, out string why)
+        {
+            string p = (g.ExeDir ?? "").ToLowerInvariant();
+            // se l'ultima prova con un nome non e' stata caricata dal gioco, si consiglia il nome successivo
+            string esito = Settings.Get(EsitoKey(g.ExeDir), "");
+            string[] order = { "dxgi.dll", "winmm.dll", "version.dll", "dbghelp.dll", "d3d12.dll", "wininet.dll", "winhttp.dll" };
+            string last = Settings.Get(EsitoKey(g.ExeDir) + ":dll", "");
+            if (esito.StartsWith("problemi") && last != "")
+            {
+                int i = Array.IndexOf(order, last.ToLowerInvariant());
+                if (i >= 0 && i < order.Length - 1) { why = "con " + last + " ci sono stati problemi nell'ultima partita: si prova il nome successivo"; return order[i + 1]; }
+            }
+            if (p.Contains("\\windowsapps\\") || p.Contains("\\xboxgames\\"))
+            { why = "gioco del Microsoft Store / Xbox: qui funziona meglio winmm.dll"; return "winmm.dll"; }
+            if (g.Vulkan && !g.Fsr31)
+            { why = "il gioco usa Vulkan: con Vulkan si usa winmm.dll"; return "winmm.dll"; }
+            if (File.Exists(Path.Combine(g.ExeDir ?? "", "dxgi.dll")) && !IsOptiDll(Path.Combine(g.ExeDir ?? "", "dxgi.dll")))
+            { why = "nella cartella c'è già un dxgi.dll (spesso ReShade): con winmm.dll funzionano tutti e due"; return "winmm.dll"; }
+            why = "gioco DirectX 11/12: dxgi.dll è il nome più compatibile";
+            return "dxgi.dll";
+        }
+
+        public const string ProxyHelp =
+            "Cos'è il «nome della DLL»: OptiScaler deve travestirsi da un file che il gioco carica da solo all'avvio. Quando il gioco cerca quel file, Windows guarda prima nella sua cartella: così carica OptiScaler.\n" +
+            "Quale scegliere, in ordine:\n" +
+            "1. dxgi.dll — il più compatibile, giochi DirectX 11 e 12 (quasi tutti). Consigliato.\n" +
+            "2. winmm.dll — giochi Vulkan, giochi del Microsoft Store / Xbox, oppure se c'è già un dxgi.dll (ReShade).\n" +
+            "3. version.dll — seconda alternativa, se i primi due non vanno.\n" +
+            "4. dbghelp, d3d12, wininet, winhttp — ultime prove.\n" +
+            "Se il gioco non carica OptiScaler o va in crash: Rimuovi e reinstalla con il nome successivo. BlackBox lo consiglia da solo.";
+
+        public const string FakeNvapiHelp =
+            "Cos'è fakenvapi: alcuni giochi mostrano DLSS (e DLSS Frame Generation, Reflex) solo se credono di avere una scheda NVIDIA. " +
+            "fakenvapi «fa finta» di essere il pezzo del driver NVIDIA che il gioco interroga: così, su una scheda AMD o Intel, l'opzione DLSS compare nel menu del gioco " +
+            "e OptiScaler la trasforma in FSR o XeSS (e DLSS Frame Generation nella generazione di fotogrammi di AMD).\n" +
+            "Quando spuntarlo: solo se il gioco ha DLSS (BlackBox lo spunta da solo in quei giochi). Se il gioco non ha DLSS non serve. Su una scheda NVIDIA non serve mai.";
 
         public static void Install(GameInfo g, string version, string proxy, bool fakeNvapi, string keepIni)
         {

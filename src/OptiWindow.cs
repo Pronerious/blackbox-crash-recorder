@@ -82,7 +82,17 @@ namespace BlackBox
             opt.Children.Add(proxyBox);
             fakeCheck = new CheckBox { Content = "fakenvapi (mostra DLSS sulle schede AMD)", Foreground = Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(14, 0, 0, 0) };
             opt.Children.Add(fakeCheck);
+            var qProxy = new Button { Content = "Cos'è il nome della DLL?", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 6, 8, 0) };
+            var qFake = new Button { Content = "Cos'è fakenvapi?", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 6, 0, 0) };
+            proxyWhy = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = Green, FontSize = 12.5, Margin = new Thickness(0, 6, 0, 0) };
+            helpBox = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = Muted, FontSize = 12.5, Margin = new Thickness(0, 6, 0, 0), Visibility = Visibility.Collapsed };
+            qProxy.Click += (s, e) => ToggleHelp(Opti.ProxyHelp);
+            qFake.Click += (s, e) => ToggleHelp(Opti.FakeNvapiHelp);
             actions.Children.Add(opt);
+            actions.Children.Add(proxyWhy);
+            var qRow = new WrapPanel(); qRow.Children.Add(qProxy); qRow.Children.Add(qFake);
+            actions.Children.Add(qRow);
+            actions.Children.Add(helpBox);
             var btns = new WrapPanel { Margin = new Thickness(-8, 10, 0, 0) };
             bInstall = new Button { Content = "Installa" }; bInstall.Click += (s, e) => { if (ConfirmInstall()) Run("Installo", g => Opti.Install(g, LatestCached(), (string)proxyBox.SelectedItem, fakeCheck.IsChecked == true, null), "installato"); };
             bUpdate = new Button { Content = "Aggiorna" }; bUpdate.Click += (s, e) => Run("Aggiorno", g => Opti.Update(g, LatestCached(), fakeCheck.IsChecked == true), "aggiornato (impostazioni tenute)");
@@ -101,6 +111,15 @@ namespace BlackBox
             win.Content = root;
             win.Closed += (s, e) => { if (Closed != null) Closed(); };
             UpdatePackage();
+        }
+
+        TextBlock proxyWhy, helpBox;
+        string helpShown = "";
+        void ToggleHelp(string text)
+        {
+            bool same = helpBox.Visibility == Visibility.Visible && helpShown == text;
+            helpBox.Text = text; helpShown = text;
+            helpBox.Visibility = same ? Visibility.Collapsed : Visibility.Visible;
         }
 
         public event Action Closed;
@@ -195,8 +214,11 @@ namespace BlackBox
             bUpdate.Content = g.OptiByBlackBox && ver != "" && g.OptiVersion != ver ? "Aggiorna a " + ver : "Aggiorna";
             bRemove.IsEnabled = g.OptiByBlackBox;
             proxyBox.IsEnabled = fakeCheck.IsEnabled = !locked && !g.OptiByBlackBox;
-            proxyBox.SelectedItem = g.OptiByBlackBox && g.OptiProxy != "" ? g.OptiProxy : Opti.SuggestedProxy(g);
+            string why, sugg = Opti.SuggestedProxy(g, out why);
+            proxyBox.SelectedItem = g.OptiByBlackBox && g.OptiProxy != "" ? g.OptiProxy : sugg;
+            proxyWhy.Text = g.OptiByBlackBox ? "Installato con " + g.OptiProxy + "." : "Consigliato per questo gioco: " + sugg + " — " + why + ".";
             fakeCheck.IsChecked = g.Dlss;
+            fakeCheck.ToolTip = g.Dlss ? "Spuntato: il gioco ha DLSS, fakenvapi lo fa comparire sulla tua scheda." : "Non serve: questo gioco non ha DLSS.";
             if (ver == "" && !locked) dState.Text += "\nPer installarlo scarica prima il pacchetto (pulsante in alto).";
             if (g.OptiByHand) dState.Text += "\nInstallato senza BlackBox: per sicurezza BlackBox non lo modifica (usa il file Remove_OptiScaler.bat nella cartella del gioco).";
         }

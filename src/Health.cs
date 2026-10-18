@@ -20,7 +20,7 @@ namespace BlackBox
     {
         // limiti scelti in base al modello riconosciuto (vedi Hardware.ChooseLimits)
         public static double HotMax { get { return Hardware.GpuHotMax; } }
-        public static double HotWarn { get { return Hardware.GpuHotMax - 10; } }
+        public static double HotWarn { get { return Hardware.GpuHotWarn; } }
         public static double HotBad { get { return Hardware.GpuHotMax - 3; } }
         public static double EdgeWarn { get { return Hardware.GpuEdgeWarn; } }
         public static double EdgeBad { get { return Hardware.GpuEdgeBad; } }

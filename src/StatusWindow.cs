@@ -70,6 +70,15 @@ namespace BlackBox
 
             Title("IL TUO PC");
             body.Children.Add(new TextBlock { Text = Hardware.Describe(), FontFamily = new FontFamily("Consolas"), FontSize = 12.5, TextWrapping = TextWrapping.Wrap });
+            // limiti di temperatura: tabella ufficiale, aggiornabile solo su richiesta
+            var lim = new DockPanel { Margin = new Thickness(0, 8, 0, 0) };
+            var upd = new Button { Content = "Aggiorna i limiti", VerticalAlignment = VerticalAlignment.Center };
+            upd.Click += (s, e) => UpdateLimits();
+            DockPanel.SetDock(upd, Dock.Right);
+            lim.Children.Add(upd);
+            lim.Children.Add(new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = Muted, FontSize = 12, VerticalAlignment = VerticalAlignment.Center,
+                Text = "I limiti di temperatura vengono da una tabella con i dati ufficiali dei produttori (AMD, Intel, NVIDIA). Se il tuo processore o la tua scheda sono usciti dopo questa versione di BlackBox, «Aggiorna i limiti» scarica la tabella più recente dal sito di BlackBox (GitHub). Solo quando lo premi." });
+            body.Children.Add(lim);
 
             Title("PROGRAMMI E IMPOSTAZIONI");
             foreach (var it in soft.OrderByDescending(x => x.Level)) Row(it);
@@ -116,6 +125,19 @@ namespace BlackBox
             }
             body.Children.Add(g);
             if (helpText != null) body.Children.Add(helpText);
+        }
+
+        void UpdateLimits()
+        {
+            if (MessageBox.Show(win, "Scarico la tabella dei limiti di temperatura più recente dal sito di BlackBox:\n" + LimitsDb.UpdateUrl +
+                                     "\n\nÈ un piccolo file di testo (pochi KB). Nessun altro dato viene inviato.\n\nProcedo?",
+                                "Aggiorna i limiti", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            string msg;
+            try { msg = LimitsDb.Update(); Hardware.Reload(); }
+            catch (Exception ex) { msg = "Aggiornamento non riuscito: " + ex.Message; }
+            result.Text = msg;
+            col.AddEvent("INFO", msg);
+            Fill();
         }
 
         void DoFix(string fix)

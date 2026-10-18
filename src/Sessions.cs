@@ -374,6 +374,7 @@ namespace BlackBox
             try { Fps.Stop(); } catch { }
             try { using (var me = Process.GetCurrentProcess()) me.PriorityClass = ProcessPriorityClass.Normal; } catch { }
             string opti = c.OptiStatus != "" ? c.OptiStatus : (all.Select(x => x.OptiScaler).LastOrDefault(x => !string.IsNullOrEmpty(x)) ?? "");
+            if (c.OptiInstalled != "" && c.OptiProxy != "") Settings.Set(OptiKey(c) + ":dll", c.OptiProxy);   // per consigliare il nome successivo se ci sono problemi
             if (c.OptiCrash != "") Settings.Set(OptiKey(c), "problemi|" + DateTime.Now.ToString("dd/MM HH:mm") + "|crash nel modulo " + c.OptiCrash);
             else if (c.OptiStatus.StartsWith("attivo")) Settings.Set(OptiKey(c), "attivo|" + DateTime.Now.ToString("dd/MM HH:mm") + "|" + c.OptiStatus);
             else if (c.OptiInstalled != "" && c.OptiChecks >= 3) Settings.Set(OptiKey(c), "problemi|" + DateTime.Now.ToString("dd/MM HH:mm") + "|non caricato dal gioco");

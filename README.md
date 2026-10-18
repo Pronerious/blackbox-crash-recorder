@@ -39,9 +39,12 @@ ti dice cosa stava succedendo un attimo prima.
 - **Test A/B** delle configurazioni (BIOS, undervolt...): ogni crash è legato alla
   configurazione attiva.
 - **Riconoscimento del PC**: al primo avvio (e a ogni avvio) riconosce CPU, scheda
-  video, driver, Adrenalin e Windows e usa i **limiti di quel modello** (es. RX 7800 XT
-  hotspot fino a 110 °C, Ryzen 7 7800X3D fino a 89 °C). Si accorge se cambi scheda o
-  aggiorni il driver.
+  video, driver, Adrenalin e Windows e usa i **limiti ufficiali di quel modello**, da una
+  tabella costruita sulle schede tecniche di AMD, Intel e NVIDIA
+  ([data/limiti.json](data/limiti.json), con la fonte per ogni riga): es. Ryzen 7 7800X3D
+  89 °C, RX 7800 XT hotspot 110 °C, RTX 5070 85 °C. I modelli non in tabella usano una
+  stima prudente dichiarata. Pulsante **Aggiorna i limiti** per scaricare la tabella più
+  recente (solo su richiesta). Si accorge se cambi scheda o aggiorni il driver.
 - **Sblocco prudente dei componenti di Windows bloccati** (TextInputHost, SearchHost,
   menu Start, Widget...): solo con consumo piatto da oltre 60 s, mai se li stai usando,
   **mai durante una partita**, al massimo 3 volte all'ora. Gli altri programmi non
@@ -91,7 +94,8 @@ ti dice cosa stava succedendo un attimo prima.
 - **Nessuna telemetria, nessun invio di dati, nessun aggiornamento automatico.**
 - Le **uniche connessioni a internet** sono i download che avvii tu con un pulsante,
   dalle release ufficiali su GitHub: **PresentMon** (verificato con la firma digitale
-  di Intel) e **OptiScaler** (verificato con l'impronta SHA-256 pubblicata da GitHub).
+  di Intel), **OptiScaler** (verificato con l'impronta SHA-256 pubblicata da GitHub) e la
+  **tabella dei limiti di temperatura** (dal repository di BlackBox).
 - Legge i contatori di Windows, il driver della scheda video, il Registro eventi e, se
   aperti, i valori pubblicati da HWiNFO o LibreHardwareMonitor.
 - Tutti i dati restano in `Documenti\BlackBox`. I CSV più vecchi di 14 giorni vengono
@@ -110,7 +114,7 @@ ti dice cosa stava succedendo un attimo prima.
 
 Scarica dalla pagina **[Releases](../../releases)**:
 
-- **`BlackBox-Setup-1.2.2.exe`** (consigliato): installa BlackBox per il tuo utente
+- **`BlackBox-Setup-1.2.3.exe`** (consigliato): installa BlackBox per il tuo utente
   in `%LocalAppData%\Programs\BlackBox`, **senza amministratore**, con collegamento nel
   menu Start, avvio automatico e disinstallazione da *Impostazioni → App*. Se BlackBox
   è già installato, prima lo disinstalla del tutto e poi installa la versione nuova; i tuoi

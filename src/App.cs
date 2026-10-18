@@ -24,9 +24,9 @@ using SD = System.Drawing;
 
 [assembly: AssemblyTitle("BlackBox")]
 [assembly: AssemblyProduct("BlackBox")]
-[assembly: AssemblyVersion("1.2.2.0")]
-[assembly: AssemblyFileVersion("1.2.2.0")]
-[assembly: AssemblyInformationalVersion("1.2.2")]
+[assembly: AssemblyVersion("1.2.3.0")]
+[assembly: AssemblyFileVersion("1.2.3.0")]
+[assembly: AssemblyInformationalVersion("1.2.3")]
 [assembly: AssemblyDescription("BlackBox - la scatola nera del PC, fatta per giocare")]
 
 namespace BlackBox

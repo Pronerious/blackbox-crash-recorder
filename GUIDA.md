@@ -222,7 +222,8 @@ chiude: va chiuso a mano da Gestione attività (Ctrl + Shift + Esc).
 ## 9. Privacy
 
 - Nessun invio di dati, nessun aggiornamento automatico. Le uniche connessioni a internet
-  sono i download di PresentMon e OptiScaler da GitHub, e solo quando premi tu il pulsante.
+  sono i download di PresentMon, OptiScaler e della tabella dei limiti da GitHub, e solo
+  quando premi tu il pulsante.
 - Legge solo i contatori di Windows, il driver della scheda video, il Registro eventi
   e, se aperti, i valori pubblicati da HWiNFO o LibreHardwareMonitor.
 - L'unica azione sul sistema è lo sblocco del punto 5, limitato all'elenco fisso.
@@ -424,16 +425,29 @@ l'Integrità della memoria): te le segnala soltanto.
 ## 15. Il tuo PC: riconoscimento automatico
 
 A ogni avvio BlackBox riconosce processore, scheda video, driver, Adrenalin e
-Windows, e sceglie i limiti giusti per quei modelli. Per esempio:
+Windows, e usa i **limiti ufficiali di quei modelli**, presi da una tabella costruita
+sulle schede tecniche dei produttori (amd.com, intel.com, nvidia.com). Alcuni esempi:
 
-| Componente | Limite usato |
-|---|---|
-| Radeon RX 5000/6000/7000/9000 | hotspot fino a 110 °C: attenzione da 100, problema da 107 |
-| NVIDIA | temperatura del chip: attenzione da 83, problema da 88 °C |
-| Ryzen 7000X3D (es. 7800X3D) | CPU fino a 89 °C |
-| Ryzen 7000/9000 | CPU fino a 95 °C (ci arrivano per progetto) |
-| Intel Core / Core Ultra | CPU fino a 100 / 105 °C |
+| Componente | Limite | Fonte |
+|---|---|---|
+| Ryzen 7000X3D (es. 7800X3D, 7950X3D) | 89 °C | amd.com |
+| Ryzen 5000X3D | 90 °C | amd.com |
+| Ryzen 5000 (5600X e serie G: 95 °C) | 90 °C | amd.com |
+| Ryzen 3000, 7000, 8000G, 9000 (anche 9000X3D) | 95 °C | amd.com |
+| Intel Core 10ª-14ª generazione (i9-12900KS: 90 °C) | 100 °C | intel.com |
+| Intel Core Ultra 200 | 105 °C | intel.com |
+| NVIDIA RTX 20/30/40/50, GTX 16 | modello per modello (es. RTX 5070 85 °C, RTX 4090 90 °C, RTX 3080 93 °C) | nvidia.com |
+| Radeon RX 5000-9000 | hotspot: rallenta da 100 °C, limite 110 °C | strumento ufficiale AMD SMI |
+| Intel Arc | 90 °C | supporto Intel |
 
+Se un modello non è in tabella (per esempio uno uscito dopo), BlackBox usa una **stima
+prudente** e lo scrive chiaramente («stima prudente: modello non verificato»). In
+*Il tuo PC* vedi quale limite usa e la fonte.
+
+**Aggiorna i limiti:** in *Il tuo PC* (tasto destro sull'icona) c'è il pulsante
+**Aggiorna i limiti**: scarica la tabella più recente dal sito di BlackBox su GitHub,
+**solo quando lo premi**. Con ogni nuova versione di BlackBox la tabella si aggiorna
+anche da sola.
 **Al primo avvio** (appena non stai giocando) mostra una finestra di benvenuto con
 cosa ha riconosciuto e cosa conviene sistemare, con i pulsanti per farlo. La ritrovi
 quando vuoi: tasto destro sull'icona → **Il tuo PC**, oppure cliccando la riga
@@ -491,7 +505,7 @@ sull'icona di BlackBox).
    | nessuno | OptiScaler di solito non funziona |
 
 3. **Chiudi il gioco** e premi **Installa**. Lascia il nome della DLL che propone
-   BlackBox (dxgi.dll; per i giochi Vulkan winmm.dll). Leggi la finestra di conferma e
+   BlackBox: sotto il menu c'è scritto quale consiglia **per quel gioco** e perché. Leggi la finestra di conferma e
    rispondi **Sì** solo se il gioco lo usi offline. Se nella cartella c'è già un file
    con lo stesso nome (spesso **ReShade**), BlackBox te lo dice: puoi scegliere un altro
    nome (winmm.dll) per tenerli tutti e due.
@@ -506,6 +520,33 @@ sull'icona di BlackBox).
 5. **Controlla**: alla prossima partita BlackBox verifica da solo che OptiScaler sia
    caricato. Lo vedi nell'overlay (*OptiScaler: attivo*), nel report della partita e qui
    (*Ultima partita: ATTIVO*).
+
+### Il «nome della DLL»: cos'è e quale scegliere
+
+OptiScaler deve «travestirsi» da un file che il gioco carica da solo all'avvio. Quando
+il gioco cerca quel file, Windows guarda prima nella sua cartella: così carica
+OptiScaler. Le scelte, in ordine:
+
+1. **dxgi.dll**: il più compatibile, per i giochi DirectX 11 e 12 (quasi tutti).
+   **Consigliato.**
+2. **winmm.dll**: giochi **Vulkan**, giochi del **Microsoft Store / Xbox**, oppure se
+   nella cartella c'è già un dxgi.dll (di solito ReShade).
+3. **version.dll**: seconda alternativa, se i primi due non vanno.
+4. **dbghelp, d3d12, wininet, winhttp**: ultime prove.
+
+BlackBox sceglie da solo quello giusto per ogni gioco. Se in una partita OptiScaler non
+viene caricato o il gioco va in crash, alla volta successiva consiglia il nome dopo.
+
+### fakenvapi: cos'è e perché
+
+Alcuni giochi mostrano **DLSS** (e DLSS Frame Generation, Reflex) solo se credono di
+avere una scheda **NVIDIA**. fakenvapi «fa finta» di essere il pezzo del driver NVIDIA
+che il gioco interroga: così, su una Radeon o una Intel Arc, l'opzione DLSS compare nel
+menu del gioco e OptiScaler la trasforma in FSR o XeSS (e DLSS Frame Generation nella
+generazione di fotogrammi di AMD).
+
+Serve **solo nei giochi che hanno DLSS**: BlackBox lo spunta da solo in quei giochi. Se
+il gioco non ha DLSS non serve; con una scheda NVIDIA non serve mai.
 
 ### Se qualcosa va storto
 

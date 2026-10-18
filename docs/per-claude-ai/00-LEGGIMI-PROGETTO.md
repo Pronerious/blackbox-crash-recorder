@@ -33,7 +33,7 @@ WPF scura, testi in italiano) che:
 
 Proprietario: non è un programmatore. PC: Ryzen 7 7800X3D, Radeon RX 7800 XT Sapphire Nitro+,
 32 GB, Windows 11. Repository: https://github.com/Pronerious/blackbox-crash-recorder
-(branch `main`). Versione attuale: **1.2.2** (release del 18/10/2026).
+(branch `main`). Versione attuale: **1.2.3** (release del 18/10/2026).
 
 ## Regole fisse
 
@@ -64,6 +64,7 @@ Proprietario: non è un programmatore. PC: Ryzen 7 7800X3D, Radeon RX 7800 XT Sa
 | `src/Fps.cs` | impostazioni (`impostazioni.ini`), download da GitHub, PresentMon (FPS, 1% low, generazione di fotogrammi), permesso una tantum |
 | `src/Overlay.cs` | overlay in gioco (finestra trasparente click-through, tasto rapido, personalizzazione) |
 | `src/Health.cs` | controllo dello stato e limiti (`Limits`) |
+| `src/LimitsDb.cs` + `data/limiti.json` | tabella dei limiti di temperatura ufficiali (AMD, Intel, NVIDIA) con fonte per ogni riga; pulsante «Aggiorna i limiti» la scarica dal repository (solo su richiesta) |
 | `src/Glossary.cs` | spiegazioni in parole semplici di ogni termine (pulsante «Cos'è?»), uguali al punto 17 della guida |
 | `src/StatusWindow.cs` | finestra «Controllo dello stato» / benvenuto, con i pulsanti che sistemano i problemi |
 | `src/Hardware.cs` | riconoscimento di CPU / GPU / driver / Windows e limiti per modello; impostazioni utili di Windows (HAGS, Modalità gioco) e loro correzione (`ApplyFix`) |
@@ -94,7 +95,10 @@ Chiavi utili di `impostazioni.ini`: `overlay_attivo`, `overlay_forma` (blocco/ba
 `gpu_delta_tipico` (differenza hotspot-edge imparata), `hw_gpu`, `hw_driver`, `hw_cpu`,
 `giochi_visti`, `opti_cartelle`, `opti_esito:<cartella>`.
 
-## Soglie principali (Hardware.cs / Health.cs)
+## Soglie principali (data/limiti.json, Hardware.cs, Health.cs)
+
+I limiti per modello stanno in `data/limiti.json` (verificati sulle pagine ufficiali il 18/10/2026; regole provate dall'alto, vince la prima). Per aggiungere un modello nuovo: aggiungere una riga con fonte e cambiare "versione" (data) nel file, poi pubblicare su main: gli utenti la ricevono con «Aggiorna i limiti».
+
 
 - Radeon RDNA (RX 5000–9000): hotspot max 110 °C → attenzione da 100, problema da 107
   (media 30 s). NVIDIA: temperatura chip attenzione 83, problema 88.

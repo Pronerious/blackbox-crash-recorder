@@ -274,6 +274,7 @@ namespace BlackBox
             LogDir = dir;
             Directory.CreateDirectory(dir);
             Settings.Load(dir);
+            LimitsDb.Load(dir);
             Fps.Init(dir);
             Opti.Init(dir);
             Games = new GameTracker(this);

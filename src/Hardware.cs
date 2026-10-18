@@ -28,7 +28,7 @@ namespace BlackBox
         // ------------------------------------------------ limiti di progetto per modello
         public static double CpuMax = 95;      // Tjmax
         public static string CpuMaxWhy = "";
-        public static double GpuHotMax = 110, GpuEdgeWarn = 90, GpuEdgeBad = 97;
+        public static double GpuHotMax = 110, GpuHotWarn = 100, GpuEdgeWarn = 90, GpuEdgeBad = 97;
         public static string GpuWhy = "";
 
         public static void Detect()
@@ -103,7 +103,45 @@ namespace BlackBox
             { GpuHotMax = 105; GpuEdgeWarn = 85; GpuEdgeBad = 92; GpuWhy = "Radeon Polaris (RX 470-590): limite più basso"; }
             else
             { GpuHotMax = 110; GpuEdgeWarn = 90; GpuEdgeBad = 97; GpuWhy = "Radeon RDNA (RX 5000/6000/7000/9000): hotspot fino a 110 °C per progetto"; }
+            GpuHotWarn = GpuHotMax - 10;
+            GpuPowerRef = 0;
+
+            // tabella dei limiti ufficiali (data/limiti.json): se il modello c'e', vince sulle regole qui sopra
+            var cr = LimitsDb.ForCpu(Cpu);
+            if (cr != null)
+            {
+                CpuMax = cr.Valore;
+                CpuMaxWhy = (cr.Nome != "" ? cr.Nome + ": " : "") + "limite " + cr.Valore.ToString("0") + " °C" +
+                            (cr.Verificato ? " (dato ufficiale del produttore)" : " (stima prudente: modello non verificato)");
+                CpuSource = cr.Fonte; CpuVerified = cr.Verificato;
+            }
+            var gr = LimitsDb.ForGpu(Gpu);
+            if (gr != null)
+            {
+                if (gr.Tipo == "hotspot")
+                {
+                    // Radeon: si legge l'hotspot; attenzione dove inizia a rallentare, problema poco prima dello spegnimento
+                    GpuHotMax = gr.Valore;
+                    GpuHotWarn = gr.Rallenta > 0 ? gr.Rallenta : gr.Valore - 10;
+                    GpuWhy = "hotspot: rallenta da " + (gr.Rallenta > 0 ? gr.Rallenta : gr.Valore - 10).ToString("0") + " °C, limite " + gr.Valore.ToString("0") + " °C";
+                }
+                else
+                {
+                    // NVIDIA / Intel Arc: si legge la temperatura del chip; il limite ufficiale e' dove inizia a rallentare
+                    GpuEdgeBad = gr.Valore; GpuEdgeWarn = gr.Valore - 5; GpuHotMax = Math.Max(GpuHotMax, gr.Valore + 10); GpuHotWarn = GpuHotMax - 10;
+                    GpuWhy = "temperatura del chip: limite " + gr.Valore.ToString("0") + " °C";
+                }
+                GpuWhy += gr.Verificato ? " (dato ufficiale del produttore)" : " (stima prudente: modello non verificato)";
+                GpuSource = gr.Fonte; GpuVerified = gr.Verificato; GpuPowerRef = gr.Potenza;
+            }
         }
+
+        public static string CpuSource = "", GpuSource = "";
+        public static bool CpuVerified, GpuVerified;
+        public static double GpuPowerRef;   // potenza di riferimento ufficiale (W), 0 = non nota
+
+        // dopo «Aggiorna i limiti»: ricalcola con la tabella nuova
+        public static void Reload() { ChooseLimits(); }
 
         // primo avvio, scheda video cambiata o driver aggiornato
         static void CompareWithLast()
@@ -240,9 +278,12 @@ namespace BlackBox
             l.Add("Processore:   " + (Cpu == "" ? "n/d" : Cpu) + " (" + Cores + " thread) — " + CpuMaxWhy);
             l.Add("Scheda video: " + (Gpu == "" ? "n/d" : Gpu) + (double.IsNaN(VramGb) ? "" : ", " + VramGb.ToString("0", CultureInfo.InvariantCulture) + " GB") + " — " + GpuWhy);
             l.Add("Driver video: " + (GpuDriver == "" ? "n/d" : GpuDriver) + (AmdSoftware != "" ? "  ·  AMD Software (Adrenalin) " + AmdSoftware : ""));
+            if (GpuPowerRef > 0) l.Add("Potenza rif.: " + GpuPowerRef.ToString("0") + " W (scheda di riferimento del produttore; i modelli dei partner possono andare oltre)");
             l.Add("Sensori GPU:  " + (GpuSensors.Ok ? GpuSensors.Vendor + " attivi" : "non disponibili"));
             l.Add("Memoria:      " + (double.IsNaN(RamGb) ? "n/d" : RamGb + " GB"));
             l.Add("Sistema:      " + Windows);
+            l.Add("Limiti:       tabella " + (LimitsDb.Version == "" ? "non disponibile (regole interne)" : LimitsDb.Version + " (" + LimitsDb.Origin + ")") +
+                  (CpuSource != "" ? "\n              fonte CPU: " + CpuSource : "") + (GpuSource != "" ? "\n              fonte GPU: " + GpuSource : ""));
             return string.Join(Environment.NewLine, l);
         }
 
