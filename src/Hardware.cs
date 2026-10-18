@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
+using System.Windows;
 
 namespace BlackBox
 {
@@ -19,6 +20,9 @@ namespace BlackBox
         public static double VramGb = double.NaN, RamGb = double.NaN;
         public static int Cores;
         public static bool FirstRun;
+        // il benvenuto resta in sospeso finche' non viene mostrato davvero (non sopra un gioco)
+        public static bool WelcomePending { get { return Settings.Get("benvenuto_mostrato", "") != "1"; } }
+        public static void WelcomeShown() { Settings.Set("benvenuto_mostrato", "1"); }
         public static readonly List<string> Changes = new List<string>();
 
         // ------------------------------------------------ limiti di progetto per modello
@@ -125,50 +129,110 @@ namespace BlackBox
         public static bool DriverChanged { get { return Changes.Any(x => x.StartsWith("Driver video aggiornato")); } }
 
         // ------------------------------------------------ software e impostazioni di Windows utili per giocare
+        // ogni voce che si puo' sistemare ha un pulsante "Sistema" (Fix) con una spiegazione semplice
         public static List<HealthItem> Software()
         {
             var r = new List<HealthItem>();
-            Action<int, string, string> add = (l, s, t) => r.Add(new HealthItem { Level = l, Short = s, Text = t });
+            Action<int, string, string, string, string> add = (l, s, t, fix, label) => r.Add(new HealthItem { Level = l, Short = s, Text = t, Fix = fix ?? "", FixLabel = label ?? "" });
             bool hwinfo = Process.GetProcessesByName("HWiNFO64").Length > 0 || Process.GetProcessesByName("HWiNFO32").Length > 0;
             bool lhm = Process.GetProcessesByName("LibreHardwareMonitor").Length > 0;
-            if (CpuTemp.Source != "") add(0, "temperatura CPU", "Temperatura della CPU letta da " + CpuTemp.Source + ".");
-            else if (hwinfo) add(-1, "HWiNFO senza memoria condivisa", "HWiNFO è aperto ma senza memoria condivisa: Settings → spunta «Shared Memory Support» (guida, punto 11).");
-            else if (lhm) add(-1, "LibreHardwareMonitor", "LibreHardwareMonitor è aperto ma non pubblica i dati: avvialo come amministratore.");
-            else add(-1, "temperatura CPU n/d", "Per la temperatura della CPU apri HWiNFO con la memoria condivisa (guida, punto 11).");
-            add(Fps.ToolPresent ? 0 : -1, "PresentMon", Fps.ToolPresent ? "PresentMon " + Fps.ToolVersion + " presente: FPS attivi nelle sessioni di gioco." : "PresentMon non scaricato: senza, niente FPS (riga FPS → Scarica PresentMon).");
-            if (!Fps.HasPermission) add(-1, "permesso FPS", "Manca il permesso per leggere gli FPS (riga FPS → Abilita FPS).");
-            try
-            {
-                using (var k = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers"))
-                {
-                    object v = k == null ? null : k.GetValue("HwSchMode");
-                    if (v is int && (int)v == 2) add(0, "HAGS attivo", "Pianificazione GPU con accelerazione hardware (HAGS) attiva: utile per la generazione di fotogrammi.");
-                    else add(-1, "HAGS spento", "Pianificazione GPU con accelerazione hardware (HAGS) spenta: per la generazione di fotogrammi conviene accenderla (Impostazioni → Schermo → Grafica → Impostazioni grafiche predefinite).");
-                }
-            }
-            catch { }
-            try
-            {
-                using (var k = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\GameBar"))
-                {
-                    object v = k == null ? null : k.GetValue("AutoGameModeEnabled");
-                    if (v is int && (int)v == 0) add(-1, "Modalità gioco spenta", "La Modalità gioco di Windows è spenta: di solito conviene accenderla (Impostazioni → Giochi → Modalità gioco).");
-                    else add(0, "Modalità gioco", "Modalità gioco di Windows attiva.");
-                }
-            }
-            catch { }
+            if (CpuTemp.Source != "") add(0, "temperatura CPU", "Temperatura della CPU letta da " + CpuTemp.Source + ".", null, null);
+            else if (hwinfo) add(1, "HWiNFO senza memoria condivisa", "HWiNFO è aperto ma non condivide i dati, quindi BlackBox non vede la temperatura della CPU. Basta una spunta in HWiNFO: il pulsante ti mostra dove.", "hwinfo-sm", "Mostrami come");
+            else if (lhm) add(-1, "LibreHardwareMonitor", "LibreHardwareMonitor è aperto ma non pubblica i dati: chiudilo e riaprilo come amministratore.", null, null);
+            else if (HwinfoExe() != null) add(-1, "HWiNFO chiuso", "Per la temperatura della CPU serve HWiNFO aperto (con la memoria condivisa).", "hwinfo-open", "Apri HWiNFO");
+            else add(-1, "temperatura CPU n/d", "Per la temperatura della CPU serve HWiNFO (gratuito). Il pulsante apre la pagina ufficiale per scaricarlo.", "hwinfo-get", "Pagina di HWiNFO");
+            if (Fps.ToolPresent) add(0, "PresentMon", "PresentMon " + Fps.ToolVersion + " presente: FPS attivi nelle sessioni di gioco.", null, null);
+            else add(1, "PresentMon mancante", "Senza PresentMon (gratuito, di Intel) BlackBox non può misurare gli FPS.", "presentmon", "Scarica PresentMon");
+            if (!Fps.HasPermission) add(1, "permesso FPS", "Manca il permesso di Windows per leggere gli FPS. Il pulsante lo chiede una volta (conferma da amministratore), poi bisogna uscire da Windows e rientrare.", "fpsperm", "Dai il permesso");
+            if (HagsOn()) add(0, "HAGS attivo", "Pianificazione GPU con accelerazione hardware (HAGS) attiva: utile per la generazione di fotogrammi.", null, null);
+            else add(1, "HAGS spento", "La «Pianificazione GPU con accelerazione hardware» (HAGS) è spenta. Serve per la generazione di fotogrammi (FSR 3 / DLSS FG) e di solito aiuta un po' la fluidità. Il pulsante la accende: Windows chiede una conferma da amministratore, poi serve un riavvio.", "hags", "Accendi HAGS");
+            if (GameModeOn()) add(0, "Modalità gioco", "Modalità gioco di Windows attiva.", null, null);
+            else add(1, "Modalità gioco spenta", "La Modalità gioco di Windows è spenta: quando giochi, Windows dà la precedenza al gioco solo se è accesa. Il pulsante la accende (nessun permesso speciale).", "gamemode", "Accendi");
             try
             {
                 using (var k = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity"))
                 {
                     object v = k == null ? null : k.GetValue("Enabled");
-                    if (v is int && (int)v == 1) add(-1, "Integrità della memoria", "Integrità della memoria (sicurezza di Windows) accesa: protegge il PC ma può togliere qualche FPS. Va bene lasciarla, è una scelta.");
+                    if (v is int && (int)v == 1) add(-1, "Integrità della memoria", "Integrità della memoria (sicurezza di Windows) accesa: protegge il PC ma può togliere qualche FPS. È una scelta di sicurezza: BlackBox non la tocca.", null, null);
                 }
             }
             catch { }
             return r;
         }
 
+        static bool HagsOn()
+        {
+            try { using (var k = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\GraphicsDrivers")) { object v = k == null ? null : k.GetValue("HwSchMode"); return v is int && (int)v == 2; } }
+            catch { return true; }
+        }
+        static bool GameModeOn()
+        {
+            try { using (var k = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\GameBar")) { object v = k == null ? null : k.GetValue("AutoGameModeEnabled"); return !(v is int && (int)v == 0); } }
+            catch { return true; }
+        }
+
+        public static string HwinfoExe()
+        {
+            foreach (var p in new[] { @"C:\Program Files\HWiNFO64\HWiNFO64.exe", @"C:\Program Files (x86)\HWiNFO64\HWiNFO64.exe" })
+                if (File.Exists(p)) return p;
+            try
+            {
+                using (var k = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\HWiNFO64_is1"))
+                {
+                    string dir = k == null ? null : k.GetValue("InstallLocation") as string;
+                    if (dir != null && File.Exists(Path.Combine(dir, "HWiNFO64.exe"))) return Path.Combine(dir, "HWiNFO64.exe");
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        // ------------------------------------------------ pulsante "Sistema": esegue la correzione, restituisce cosa e' successo
+        public static string ApplyFix(string fix, Window owner)
+        {
+            switch (fix)
+            {
+                case "gamemode":
+                    using (var k = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\GameBar"))
+                    { k.SetValue("AutoGameModeEnabled", 1, RegistryValueKind.DWord); k.SetValue("AllowAutoGameMode", 1, RegistryValueKind.DWord); }
+                    return "Modalità gioco accesa.";
+                case "hags":
+                    if (MessageBox.Show(owner, "Accendo la «Pianificazione GPU con accelerazione hardware» (HAGS).\n\nWindows ti chiederà una conferma da amministratore: premi Sì.\nDopo bisogna riavviare il PC perché valga.\n\nProcedo?",
+                                        "Accendi HAGS", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return "";
+                    try
+                    {
+                        var psi = new ProcessStartInfo("reg.exe", @"add ""HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers"" /v HwSchMode /t REG_DWORD /d 2 /f")
+                        { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden };
+                        using (var p = Process.Start(psi)) p.WaitForExit(20000);
+                    }
+                    catch (Exception ex) { return "HAGS non acceso: " + ex.Message; }
+                    if (!HagsOn()) return "HAGS non acceso (conferma annullata?).";
+                    if (MessageBox.Show(owner, "HAGS acceso. Serve un riavvio perché valga.\n\nRiavviare adesso? (salva prima il tuo lavoro)", "HAGS acceso",
+                                        MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                        try { Process.Start(new ProcessStartInfo("shutdown.exe", "/r /t 5") { UseShellExecute = false, CreateNoWindow = true }); } catch { }
+                    return "HAGS acceso: vale dal prossimo riavvio.";
+                case "hwinfo-open":
+                    try { Process.Start(HwinfoExe()); return "HWiNFO aperto: se la temperatura non arriva, controlla la memoria condivisa (pulsante «Mostrami come»)."; }
+                    catch (Exception ex) { return "HWiNFO non aperto: " + ex.Message; }
+                case "hwinfo-get":
+                    try { Process.Start("https://www.hwinfo.com/download/"); } catch { }
+                    return "Pagina di HWiNFO aperta nel browser: scegli «Installer» (gratuito), installalo e aprilo.";
+                case "hwinfo-sm":
+                    MessageBox.Show(owner, "Accendere la memoria condivisa di HWiNFO (una volta sola):\n\n" +
+                        "1.  Apri la finestra di HWiNFO: clic sulla sua icona vicino all'orologio (freccetta ^ se non la vedi).\n" +
+                        "2.  Nella finestra dei sensori, in basso, clicca l'INGRANAGGIO (Settings).\n" +
+                        "3.  Nella scheda «General / User Interface» metti la spunta su «Shared Memory Support».\n" +
+                        "4.  Premi OK.\n\n" +
+                        "Dopo pochi secondi la temperatura della CPU compare in BlackBox.\n" +
+                        "Nota: nella versione gratuita di HWiNFO la memoria condivisa si spegne dopo 12 ore: se la temperatura torna «n/d», rimetti la spunta.",
+                        "HWiNFO — memoria condivisa", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return "Quando hai messo la spunta, la temperatura della CPU compare da sola.";
+                case "taskmgr":
+                    try { Process.Start("taskmgr.exe"); } catch { }
+                    return "";
+            }
+            return "";
+        }
         // testo del riepilogo (primo avvio e controllo dello stato)
         public static string Describe()
         {

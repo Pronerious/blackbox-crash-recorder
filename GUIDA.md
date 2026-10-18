@@ -157,6 +157,8 @@ Windows: installa gli aggiornamenti di Windows Update.
 | Tasto destro → Ultimo report | apre l'ultimo report di spegnimento |
 | Tasto destro → Ultima sessione di gioco | apre il report dell'ultima partita |
 | Tasto destro → Overlay in gioco | acceso/spento, posizione, dimensione del testo (punto 13) |
+| Tasto destro → Giochi & OptiScaler | apre la gestione di OptiScaler (punto 16) |
+| Tasto destro → Il tuo PC | hardware riconosciuto, controllo dello stato e pulsanti per sistemare (punti 14-15) |
 | Tasto destro → Apri cartella log | apre la cartella dei dati |
 | Tasto destro → Guida | apre questa guida |
 | Tasto destro → Esci | ferma davvero BlackBox |
@@ -388,6 +390,21 @@ ok**, oppure cosa non va. Cliccala per l'elenco completo:
 
 Il simbolo ℹ è solo un'informazione, non un problema.
 
+**Pulsanti che sistemano da soli.** Nel controllo dello stato, accanto ai problemi che
+si possono risolvere c'è un pulsante:
+
+| Problema | Pulsante | Cosa fa |
+|---|---|---|
+| HAGS spento | **Accendi HAGS** | lo accende (Windows chiede una conferma da amministratore), poi propone il riavvio |
+| Modalità gioco spenta | **Accendi** | la accende subito, senza permessi speciali |
+| HWiNFO senza memoria condivisa | **Mostrami come** | ti mostra i 3 clic da fare in HWiNFO |
+| HWiNFO chiuso / non installato | **Apri HWiNFO** / **Pagina di HWiNFO** | lo apre / apre la pagina ufficiale per scaricarlo |
+| PresentMon mancante, permesso FPS | **Scarica PresentMon** / **Dai il permesso** | come al punto 12 |
+| programma che consuma in background | **Apri Gestione attività** | decidi tu se chiuderlo |
+
+BlackBox non cambia mai da solo le impostazioni di sicurezza di Windows (per esempio
+l'Integrità della memoria): te le segnala soltanto.
+
 ## 15. Il tuo PC: riconoscimento automatico
 
 A ogni avvio BlackBox riconosce processore, scheda video, driver, Adrenalin e
@@ -401,8 +418,10 @@ Windows, e sceglie i limiti giusti per quei modelli. Per esempio:
 | Ryzen 7000/9000 | CPU fino a 95 °C (ci arrivano per progetto) |
 | Intel Core / Core Ultra | CPU fino a 100 / 105 °C |
 
-**Al primo avvio** mostra cosa ha riconosciuto e cosa conviene sistemare. Lo trovi
-sempre anche nel controllo dello stato, sotto *Il tuo PC*.
+**Al primo avvio** (appena non stai giocando) mostra una finestra di benvenuto con
+cosa ha riconosciuto e cosa conviene sistemare, con i pulsanti per farlo. La ritrovi
+quando vuoi: tasto destro sull'icona → **Il tuo PC**, oppure cliccando la riga
+*Controllo stato* nella finestra.
 
 Se **cambi scheda video**, i valori imparati ripartono da capo. Se **aggiorni il
 driver**, BlackBox controlla alla partita successiva se Adrenalin ha azzerato il tuo
@@ -410,51 +429,80 @@ UV/OC (succede spesso).
 
 ## 16. Giochi & OptiScaler
 
-**OptiScaler** è un programma gratuito (licenza GPL) che si mette nella cartella di un
-gioco e sostituisce il suo upscaler: per esempio un gioco con solo DLSS (NVIDIA) può
-usare FSR 3.1/4 o XeSS sulla tua Radeon, e avere la generazione di fotogrammi.
+### Cos'è, in parole semplici
 
-Si apre dal pulsante **Giochi & OptiScaler** in alto, oppure dal tasto destro
-sull'icona.
+**OptiScaler** è un programma gratuito (licenza GPL) che si mette **nella cartella di un
+gioco** e cambia l'upscaler che il gioco usa. Esempio: un gioco ha solo DLSS (che
+funziona solo sulle NVIDIA): con OptiScaler, sulla tua Radeon, al posto di DLSS lavora
+FSR 3.1/4 o XeSS. Risultato: più FPS con un'immagine pulita, e a volte la generazione
+di fotogrammi.
 
-**1. Scarica il pacchetto.** Premi **Scarica l'ultima versione**. BlackBox lo prende
-dalla pagina ufficiale (github.com/optiscaler/OptiScaler), lo controlla e lo mette in
-`Documenti\BlackBox\optiscaler\<versione>`. È un archivio .7z: lo apre Windows da
-solo (con 7-Zip, se c'è). La spunta *includi pre-release* prende anche le versioni di
-prova: lasciala spenta.
+### ⚠ La regola più importante: MAI nei giochi online
 
-**2. Scegli il gioco.** BlackBox trova da solo i giochi di Steam, Epic e GOG e quelli
-visti nelle sessioni di gioco. Gli altri li aggiungi con **Aggiungi cartella di un
-gioco**. Per ogni gioco vedi gli upscaler che ha e un consiglio:
+Gli **anti-cheat** dei giochi online controllano quali file usa il gioco. OptiScaler
+è un file in più dentro il gioco: anche se non bara, l'anti-cheat può vederlo e
+**bannarti l'account**, anche dopo una sola partita.
 
-| Il gioco ha | Consiglio |
+BlackBox **blocca da solo**:
+
+- i giochi con un anti-cheat riconosciuto dai suoi file (Easy Anti-Cheat, BattlEye,
+  EA AntiCheat, Vanguard, ACE, nProtect, XIGNCODE, EQU8, PunkBuster, FACEIT...);
+- i giochi online noti anche se l'anti-cheat non lascia file (per esempio
+  Counter-Strike 2, Dota 2 e gli altri con VAC di Steam, Call of Duty, Fortnite,
+  Valorant, Apex, PUBG, Rainbow Six, GTA V, Battlefield, EA FC...);
+- i giochi **a 32 bit**, dove OptiScaler non può funzionare.
+
+Per questi giochi non compare nessun pulsante. **Se un gioco non bloccato lo usi
+online, non installarlo lo stesso**: prima di installare BlackBox te lo chiede sempre.
+
+### Come si fa, passo passo
+
+Apri **Giochi & OptiScaler** (pulsante in alto nella finestra, oppure tasto destro
+sull'icona di BlackBox).
+
+1. **Scarica il pacchetto** (una volta sola): pulsante **Scarica l'ultima versione**.
+   BlackBox lo prende dalla pagina ufficiale (github.com/optiscaler/OptiScaler), lo
+   controlla e lo tiene in `Documenti\BlackBox\optiscaler`. La spunta *includi
+   pre-release* lasciala spenta.
+2. **Scegli il gioco** nell'elenco a sinistra. BlackBox trova da solo i giochi di
+   Steam, Epic, GOG e quelli che hai già giocato; gli altri li aggiungi con **Aggiungi
+   cartella di un gioco**. A destra vedi gli upscaler del gioco e un consiglio:
+
+   | Il gioco ha | Consiglio |
+   |---|---|
+   | FSR 3.1 | di solito basta così (sulle RX 9000 attiva FSR 4 in Adrenalin) |
+   | solo DLSS, XeSS o FSR 2 | **OptiScaler consigliato** |
+   | nessuno | OptiScaler di solito non funziona |
+
+3. **Chiudi il gioco** e premi **Installa**. Lascia il nome della DLL che propone
+   BlackBox (dxgi.dll; per i giochi Vulkan winmm.dll). Leggi la finestra di conferma e
+   rispondi **Sì** solo se il gioco lo usi offline. Se nella cartella c'è già un file
+   con lo stesso nome (spesso **ReShade**), BlackBox te lo dice: puoi scegliere un altro
+   nome (winmm.dll) per tenerli tutti e due.
+4. **Attivalo nel gioco** (BlackBox ti mostra questi passi dopo l'installazione):
+   1. avvia il gioco e nelle opzioni grafiche scegli **DLSS** (ora compare anche sulla
+      Radeon) o XeSS/FSR, con la qualità che vuoi;
+   2. premi il tasto **Inizio (Home)**: si apre il menu di OptiScaler;
+   3. alla voce **Upscalers** scegli FSR 3.1 / FSR 4 oppure XeSS;
+   4. per la generazione di fotogrammi attiva nel gioco *DLSS Frame Generation*:
+      OptiScaler la trasforma in quella di AMD (sezione *Frame Generation* del menu);
+   5. premi di nuovo **Inizio (Home)** per chiudere il menu. Le scelte restano salvate.
+5. **Controlla**: alla prossima partita BlackBox verifica da solo che OptiScaler sia
+   caricato. Lo vedi nell'overlay (*OptiScaler: attivo*), nel report della partita e qui
+   (*Ultima partita: ATTIVO*).
+
+### Se qualcosa va storto
+
+| Cosa vedi | Cosa fare |
 |---|---|
-| FSR 3.1 | di solito basta così (sulle RX 9000 attiva FSR 4 in Adrenalin) |
-| solo DLSS, XeSS o FSR 2 | OptiScaler consigliato |
-| nessuno | OptiScaler di solito non funziona |
-| un **anti-cheat** (Easy Anti-Cheat, BattlEye, EA AntiCheat, Vanguard...) | **bloccato**: nei giochi online rischi il ban |
+| *"installato ma NON caricato"* | il gioco non usa quel nome di DLL: **Rimuovi** e reinstalla con **winmm.dll** o **version.dll** |
+| *"Crash causato da OptiScaler"* | stessa cura: altro nome di DLL, oppure **Rimuovi** |
+| il gioco non parte | chiudilo, **Rimuovi**, riprova con un altro nome |
+| vuoi tornare com'era | **Rimuovi**: la cartella del gioco torna esattamente com'era |
+| è uscita una versione nuova | **Scarica l'ultima versione**, poi **Aggiorna** (le tue impostazioni restano) |
 
-**3. Installa.** Con il gioco **chiuso** premi **Installa**. Il nome della DLL di solito
-va bene così (dxgi.dll; per i giochi Vulkan winmm.dll). *fakenvapi* serve a far
-comparire DLSS sulle schede AMD: è già spuntato se il gioco ha DLSS. Se nella cartella
-c'erano file con lo stesso nome, vengono messi da parte (`.blackbox-bak`).
-
-**4. Gioca.** Il menu di OptiScaler in gioco si apre con il tasto **Inizio (Home)**.
-BlackBox controlla da solo che OptiScaler sia davvero caricato: lo vedi nell'overlay
-(*OptiScaler: attivo*), nel report della partita e nella finestra Giochi & OptiScaler
-(*Ultima partita: ATTIVO*).
-
-**Se qualcosa va storto:**
-
-- *"installato ma NON caricato"*: il gioco non usa quel nome di DLL. **Rimuovi** e
-  reinstalla scegliendo **winmm.dll** o **version.dll**.
-- *"Crash causato da OptiScaler"*: il gioco si è chiuso per errore dentro una DLL di
-  OptiScaler. Stessa cura: altro nome di DLL, oppure **Rimuovi**.
-- **Rimuovi** riporta la cartella del gioco esattamente com'era.
-- **Aggiorna** installa la versione nuova e tiene le tue impostazioni
-  (`OptiScaler.ini`).
-
-**Prima e dopo:** la finestra mostra le medie delle tue partite a quel gioco senza e con
+**Prima e dopo:** qui vedi le medie delle tue partite a quel gioco senza e con
 OptiScaler (FPS, 1% low, watt). Confronta la stessa scena.
 
-Se OptiScaler era già installato a mano, BlackBox non lo tocca.
+Se OptiScaler era già installato a mano, BlackBox non lo tocca (usa il file
+`Remove_OptiScaler.bat` nella cartella del gioco).

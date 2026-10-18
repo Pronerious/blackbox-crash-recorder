@@ -33,7 +33,7 @@ WPF scura, testi in italiano) che:
 
 Proprietario: non è un programmatore. PC: Ryzen 7 7800X3D, Radeon RX 7800 XT Sapphire Nitro+,
 32 GB, Windows 11. Repository: https://github.com/Pronerious/blackbox-crash-recorder
-(branch `main`). Versione attuale: **1.2.0** (release del 18/10/2026).
+(branch `main`). Versione attuale: **1.2.1** (release del 18/10/2026).
 
 ## Regole fisse
 
@@ -45,6 +45,7 @@ Proprietario: non è un programmatore. PC: Ryzen 7 7800X3D, Radeon RX 7800 XT Sa
 - **Leggerezza in gioco**: non deve mai togliere FPS. Misurato circa 0,15–0,3% di CPU con
   l'overlay; in partita priorità bassa, controlli più radi, niente notifiche.
 - **Niente falsi allarmi**: soglie sul modello di CPU/GPU e medie di 30 secondi.
+- **OptiScaler a prova di errore**: bloccato nei giochi con anti-cheat (file) e nei giochi online noti (elenco `OnlineGamesList` in Opti.cs, es. VAC) e nei giochi a 32 bit; conferma «solo offline» prima di installare; avviso se c'è già un file con lo stesso nome (ReShade).
 - **Mai chiudere programmi dell'utente**: lo sblocco automatico tocca solo un elenco fisso
   di componenti di Windows, mai durante una partita.
 - La **guida è dentro l'exe** (`GUIDA.md` incorporata, pulsante Guida) e va aggiornata a
@@ -63,7 +64,8 @@ Proprietario: non è un programmatore. PC: Ryzen 7 7800X3D, Radeon RX 7800 XT Sa
 | `src/Fps.cs` | impostazioni (`impostazioni.ini`), download da GitHub, PresentMon (FPS, 1% low, generazione di fotogrammi), permesso una tantum |
 | `src/Overlay.cs` | overlay in gioco (finestra trasparente click-through, tasto rapido, personalizzazione) |
 | `src/Health.cs` | controllo dello stato e limiti (`Limits`) |
-| `src/Hardware.cs` | riconoscimento di CPU / GPU / driver / Windows e limiti per modello; impostazioni utili di Windows (HAGS, Modalità gioco) |
+| `src/StatusWindow.cs` | finestra «Controllo dello stato» / benvenuto, con i pulsanti che sistemano i problemi |
+| `src/Hardware.cs` | riconoscimento di CPU / GPU / driver / Windows e limiti per modello; impostazioni utili di Windows (HAGS, Modalità gioco) e loro correzione (`ApplyFix`) |
 | `src/CpuTemp.cs` | temperatura CPU da HWiNFO (memoria condivisa) o LibreHardwareMonitor |
 | `src/Opti.cs` | OptiScaler: ricerca giochi, upscaler, anti-cheat, pacchetto, installa/rimuovi/aggiorna, controllo caricamento |
 | `src/OptiWindow.cs` | finestra «Giochi & OptiScaler» |
@@ -109,11 +111,12 @@ Chiavi utili di `impostazioni.ini`: `overlay_attivo`, `overlay_forma` (blocco/ba
 ## Situazione al 18/10/2026
 
 - Fatto: tutte le fasi del piano 1.2 (sessioni, temperatura CPU, FPS, overlay, controllo
-  stato, OptiScaler, ottimizzazioni, installer), release v1.2.0 pubblicata.
+  stato, OptiScaler, ottimizzazioni, installer), release v1.2.0 e v1.2.1 (benvenuto corretto,
+  pulsanti «Sistema», OptiScaler a prova di errore, revisione completa del codice).
 - Sul PC dell'utente: **HWiNFO è aperto ma senza memoria condivisa** (la temperatura CPU
   resta n/d finché non spunta *Shared Memory Support*); **HAGS è spento** (conviene
   accenderlo per la generazione di fotogrammi).
-- In Esecuzione automatica c'è ancora un vecchio script «Monitor Spegnimenti» (PowerShell,
-  settembre) che fa un lavoro simile: si può togliere.
+- Il vecchio script «Monitor Spegnimenti» in Esecuzione automatica è stato tolto (collegamento
+  nel Cestino) il 18/10.
 - Idee per il futuro: firma digitale degli exe (niente avviso SmartScreen), aggiornamento
   automatico facoltativo, grafici delle sessioni nella finestra.

@@ -117,7 +117,12 @@ namespace BlackBox
                 if ((s.Time - c.ExitedAt).TotalSeconds >= ExitWaitSecs) { Close(c.Crashes.Count > 0 ? "il gioco si è chiuso con un errore" : "il gioco si è chiuso"); DetectStart(s); }
                 return;
             }
-            if (!Alive(c)) { c.ExitedAt = s.Time; EndThrottle(c); return; }
+            if (!Alive(c))
+            {
+                c.ExitedAt = s.Time; EndThrottle(c);
+                col.PollEventsSoon();   // il gioco e' uscito: leggo subito il Registro eventi per vedere se e' andato in crash
+                return;
+            }
 
             Fps.GameInFront = s.ForegroundPid == c.Pid;
             if (s.ForegroundPid == c.Pid)
@@ -263,8 +268,11 @@ namespace BlackBox
             if (tuneClk.Count < TuningSamples || tuneMv.Count < TuningSamples) return;
 
             double clkNow = tuneClk.Max(), mvNow = tuneMv.Average();
-            var prev = SessionLog.Read(dir).Where(x => x.Start < tuneSince &&!double.IsNaN(x.ClkMax) && !double.IsNaN(x.MvLoad))
-                                           .OrderByDescending(x => x.Start).Take(5).ToList();
+            var before = SessionLog.Read(dir).Where(x => x.Start < tuneSince && !double.IsNaN(x.ClkMax) && !double.IsNaN(x.MvLoad)).ToList();
+            // stesso gioco se possibile: giochi diversi hanno clock diversi (un gioco leggero sale anche del 6-7%) e darebbero falsi allarmi
+            var sameGame = before.Where(x => string.Equals(x.Game, c.Game, StringComparison.OrdinalIgnoreCase)).OrderByDescending(x => x.Start).Take(5).ToList();
+            bool useClock = sameGame.Count > 0;
+            var prev = useClock ? sameGame : before.OrderByDescending(x => x.Start).Take(5).ToList();
             string why = tuneWhy;
             tuneSince = DateTime.MinValue; tuneWhy = "";
             tuneClk.Clear(); tuneMv.Clear();
@@ -279,7 +287,8 @@ namespace BlackBox
             double clkBase = prev.Average(x => x.ClkMax), mvBase = prev.Average(x => x.MvLoad);
             double dMv = mvNow - mvBase, dClk = (clkNow - clkBase) / clkBase;
             string vals = "ora " + N0(mvNow) + " mV e " + N0(clkNow) + " MHz, prima di solito " + N0(mvBase) + " mV e " + N0(clkBase) + " MHz";
-            if (dMv >= TuningMv || Math.Abs(dClk) >= TuningClk)
+            // tensione sotto carico pieno: confrontabile anche tra giochi diversi; clock: solo con lo stesso gioco
+            if (dMv >= TuningMv || (useClock && Math.Abs(dClk) >= TuningClk))
             {
                 c.Tuning = "RESET: Adrenalin ha ripristinato i valori di fabbrica dopo " + why + " (" + vals + ")";
                 col.AddEvent("WARN", "Adrenalin ha ripristinato i valori di fabbrica dopo un crash: lo UV/OC non è più attivo (" + vals + ")");
@@ -304,7 +313,7 @@ namespace BlackBox
             if (loaded != null && c.OptiChecks == 1) col.AddEvent("INFO", "OptiScaler attivo in " + c.Game + " (" + loaded + ")");
         }
 
-        static string OptiKey(GameSession c) { return "opti_esito:" + (c.ExePath == "" ? c.Game : Path.GetDirectoryName(c.ExePath)); }
+        static string OptiKey(GameSession c) { return Opti.EsitoKey(c.ExePath == "" ? c.Game : Path.GetDirectoryName(c.ExePath)); }
 
         // ------------------------------------------------ eventi dal Registro di Windows
         public void OnTdr(DateTime t)

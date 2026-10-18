@@ -57,6 +57,9 @@ ti dice cosa stava succedendo un attimo prima.
 - **Overlay in gioco**: blocco o barra, 6 posizioni, colori, sfondo e righe a scelta,
   tasto rapido Ctrl+Shift+O. Non entra dentro il gioco (nessuna DLL iniettata), quindi
   niente conflitti con gli anti-cheat; il gioco resta in *Independent Flip*.
+- **Pulsanti che sistemano da soli**: HAGS spento, Modalità gioco spenta, HWiNFO senza
+  memoria condivisa, PresentMon mancante: accanto al problema c'è il pulsante che lo
+  risolve (o mostra esattamente cosa fare). Le impostazioni di sicurezza non le tocca mai.
 - **Controllo dello stato**: «✔ tutto ok» oppure cosa non va, con soglie sul tuo
   hardware e medie di 30 s (niente falsi allarmi per un picco di un attimo).
 - **Undervolt / overclock**: stabilità (crash del driver, crash del gioco, throttling
@@ -71,8 +74,12 @@ ti dice cosa stava succedendo un attimo prima.
 - Trova i giochi di **Steam, Epic, GOG**, quelli visti in sessione e le cartelle
   aggiunte a mano; riconosce gli upscaler (DLSS, FSR 3.1, FSR 2, XeSS) e consiglia se
   OptiScaler serve.
-- **Blocca i giochi con anti-cheat** (Easy Anti-Cheat, BattlEye, EA AntiCheat,
-  Vanguard...): rischio ban.
+- **Blocca da solo i giochi con anti-cheat** (Easy Anti-Cheat, BattlEye, EA AntiCheat,
+  Vanguard, ACE...), i **giochi online noti** anche senza file di anti-cheat (es. VAC di
+  Steam) e i giochi **a 32 bit**: niente pulsanti, rischio ban azzerato. Prima di ogni
+  installazione chiede conferma che il gioco si usi offline e avvisa se c'è già un'altra
+  mod (es. ReShade).
+- Dopo l'installazione spiega **come attivarlo nel gioco**, passo passo.
 - **Installa, aggiorna, rimuove** OptiScaler: copie di sicurezza dei file del gioco,
   manifest, la rimozione riporta la cartella esattamente com'era; l'aggiornamento
   tiene le tue impostazioni.

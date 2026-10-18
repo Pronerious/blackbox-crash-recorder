@@ -40,6 +40,7 @@ namespace BlackBox
         {
             DateTime nextLhm = DateTime.MinValue;
             bool lhmRunning = false;
+            DateTime nextLhmRead = DateTime.MinValue;
             while (true)
             {
                 try
@@ -53,8 +54,14 @@ namespace BlackBox
                             lhmRunning = Process.GetProcessesByName("LibreHardwareMonitor").Length > 0;
                             nextLhm = DateTime.Now.AddSeconds(10);
                         }
-                        if (lhmRunning && Lhm.Read(out v, out label)) Set(v, "LibreHardwareMonitor", label);
-                        else Set(double.NaN, "", "");
+                        // WMI costa piu' della memoria condivisa: LibreHardwareMonitor si legge ogni 3 s
+                        if (lhmRunning && DateTime.Now >= nextLhmRead)
+                        {
+                            nextLhmRead = DateTime.Now.AddSeconds(3);
+                            if (Lhm.Read(out v, out label)) Set(v, "LibreHardwareMonitor", label);
+                            else Set(double.NaN, "", "");
+                        }
+                        else if (!lhmRunning) Set(double.NaN, "", "");
                     }
                 }
                 catch { Set(double.NaN, "", ""); }

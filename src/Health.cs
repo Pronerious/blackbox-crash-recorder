@@ -12,6 +12,7 @@ namespace BlackBox
     {
         public int Level;
         public string Short, Text;
+        public string Fix = "", FixLabel = "";   // azione del pulsante "Sistema" (vuoto = nessuna)
     }
 
     // ---------------------------------------------------------------- Limiti della scheda e della CPU di questo PC
@@ -158,7 +159,7 @@ namespace BlackBox
 
             // ---- programmi che consumano tanto in background: solo informazione, BlackBox non li chiude mai
             string hogs = col.BackgroundHogs;
-            if (hogs != "") add(-1, "CPU in background", "In background consumano molto da oltre 10 minuti: " + hogs + ". Può essere un lavoro normale (antivirus, aggiornamenti, download); se non sai cos'è e dura ore, chiudilo da Gestione attività. BlackBox non lo chiude da solo.");
+            if (hogs != "") r.Add(new HealthItem { Level = -1, Short = "CPU in background", Fix = "taskmgr", FixLabel = "Apri Gestione attività", Text = "In background consumano molto da oltre 10 minuti: " + hogs + ". Può essere un lavoro normale (antivirus, aggiornamenti, download); se non sai cos'è e dura ore, chiudilo da Gestione attività. BlackBox non lo chiude da solo." });
             // ---- strumenti
             if (playing && double.IsNaN(s0.Fps)) add(-1, "FPS n/d", "FPS non disponibili: " + (Fps.ToolPresent ? (Fps.Status != "" ? Fps.Status : "in attesa dei fotogrammi") : "scarica PresentMon (guida, punto 12)") + ".");
             return r;

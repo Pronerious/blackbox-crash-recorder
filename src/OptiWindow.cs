@@ -40,8 +40,12 @@ namespace BlackBox
             // ---- intestazione: pacchetto OptiScaler
             var head = new StackPanel { Margin = new Thickness(6, 0, 6, 8) };
             head.Children.Add(new TextBlock { Text = "Giochi & OptiScaler", FontSize = 22, FontWeight = FontWeights.SemiBold });
-            head.Children.Add(new TextBlock { Text = "OptiScaler sostituisce DLSS/XeSS/FSR 2 di un gioco con FSR 3.1/4 o XeSS, e può aggiungere la generazione di fotogrammi. Si scarica solo quando premi il pulsante, dalla pagina ufficiale su GitHub.",
-                                              Foreground = Muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 8) });
+            head.Children.Add(new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 4), FontSize = 12.5,
+                Text = "Cos'è: OptiScaler è un programma gratuito che si mette nella cartella di un gioco e gli fa usare un upscaler migliore per la tua scheda (per esempio FSR 3.1/4 o XeSS al posto di DLSS, che sulle Radeon non funziona). Più FPS con un'immagine pulita." });
+            head.Children.Add(new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4), FontSize = 12.5, Foreground = Muted,
+                Text = "Come si usa:  1) Scarica il pacchetto (una volta).   2) Scegli il gioco nell'elenco.   3) Chiudi il gioco e premi Installa.   4) Avvia il gioco: nelle opzioni grafiche scegli DLSS (o XeSS/FSR) e premi il tasto Inizio (Home) per il menu di OptiScaler.   5) Se qualcosa non va: Rimuovi, e il gioco torna com'era." });
+            head.Children.Add(new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8), FontSize = 12.5, Foreground = Red, FontWeight = FontWeights.SemiBold,
+                Text = "MAI nei giochi online (multigiocatore, classificate): gli anti-cheat vedono OptiScaler e puoi essere bannato. BlackBox blocca da solo i giochi con anti-cheat riconosciuto, ma se un gioco lo usi online non installarlo comunque." });
             var bar = new WrapPanel();
             pkgText = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0), FontWeight = FontWeights.SemiBold };
             var bDown = new Button { Content = "Scarica l'ultima versione" }; bDown.Click += (s, e) => DownloadPackage();
@@ -80,7 +84,7 @@ namespace BlackBox
             opt.Children.Add(fakeCheck);
             actions.Children.Add(opt);
             var btns = new WrapPanel { Margin = new Thickness(-8, 10, 0, 0) };
-            bInstall = new Button { Content = "Installa" }; bInstall.Click += (s, e) => Run("Installo", g => Opti.Install(g, LatestCached(), (string)proxyBox.SelectedItem, fakeCheck.IsChecked == true, null), "installato");
+            bInstall = new Button { Content = "Installa" }; bInstall.Click += (s, e) => { if (ConfirmInstall()) Run("Installo", g => Opti.Install(g, LatestCached(), (string)proxyBox.SelectedItem, fakeCheck.IsChecked == true, null), "installato"); };
             bUpdate = new Button { Content = "Aggiorna" }; bUpdate.Click += (s, e) => Run("Aggiorno", g => Opti.Update(g, LatestCached(), fakeCheck.IsChecked == true), "aggiornato (impostazioni tenute)");
             bRemove = new Button { Content = "Rimuovi" }; bRemove.Click += (s, e) => Run("Rimuovo", g => Opti.Remove(g), "rimosso: la cartella del gioco è tornata com'era");
             bFolder = new Button { Content = "Apri cartella" }; bFolder.Click += (s, e) => { if (selected != null) try { Process.Start("explorer.exe", "\"" + selected.ExeDir + "\""); } catch { } };
@@ -144,8 +148,8 @@ namespace BlackBox
                 var gg = g;
                 var sp = new StackPanel();
                 sp.Children.Add(new TextBlock { Text = g.Name, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
-                string tag = g.AntiCheat != "" ? "anti-cheat: bloccato" : g.OptiByBlackBox ? "OptiScaler " + g.OptiVersion : g.OptiByHand ? "OptiScaler (a mano)" : g.Upscalers;
-                sp.Children.Add(new TextBlock { Text = g.Store + " · " + tag, FontSize = 12, Foreground = g.AntiCheat != "" ? Red : (g.OptiByBlackBox || g.OptiByHand) ? Green : Muted, TextTrimming = TextTrimming.CharacterEllipsis });
+                string tag = g.AntiCheat != "" ? "anti-cheat: bloccato" : !g.Is64 ? "32 bit: non compatibile" : g.OptiByBlackBox ? "OptiScaler " + g.OptiVersion : g.OptiByHand ? "OptiScaler (a mano)" : g.Upscalers;
+                sp.Children.Add(new TextBlock { Text = g.Store + " · " + tag, FontSize = 12, Foreground = g.Blocked ? Red : (g.OptiByBlackBox || g.OptiByHand) ? Green : Muted, TextTrimming = TextTrimming.CharacterEllipsis });
                 var b = new Border { Child = sp, Padding = new Thickness(8, 5, 8, 5), CornerRadius = new CornerRadius(6), Cursor = System.Windows.Input.Cursors.Hand,
                                      Background = g == selected ? Sel : Brushes.Transparent, Margin = new Thickness(0, 1, 0, 1) };
                 b.MouseLeftButtonUp += (s, e) => { selected = gg; FillList(); ShowDetails(); };
@@ -161,9 +165,9 @@ namespace BlackBox
             dTitle.Text = g.Name;
             dInfo.Text = "Cartella dell'eseguibile: " + g.ExeDir + "\nEseguibile: " + Path.GetFileName(g.Exe) + (g.Vulkan ? "  (Vulkan)" : "") + "\nUpscaler nel gioco: " + g.Upscalers;
             dAdvice.Text = g.Advice;
-            dAdvice.Foreground = g.AntiCheat != "" ? Red : (g.Dlss || g.Xess || g.Fsr2) && !(g.Fsr31 || g.Fsr31Vk) ? Green : Text;
+            dAdvice.Foreground = g.Blocked ? Red : (g.Dlss || g.Xess || g.Fsr2) && !(g.Fsr31 || g.Fsr31Vk) ? Green : Text;
 
-            string esito = Settings.Get("opti_esito:" + g.ExeDir, "");
+            string esito = Settings.Get(Opti.EsitoKey(g.ExeDir), "");
             string st = "OptiScaler: " + g.OptiState;
             if (esito != "")
             {
@@ -175,9 +179,17 @@ namespace BlackBox
             dState.Text = st;
             dCompare.Text = Compare(g);
 
-            bool locked = g.AntiCheat != "";
+            bool locked = g.Blocked;
             string ver = LatestCached();
-            actions.Visibility = Visibility.Visible;
+            // gioco con anti-cheat: nessun pulsante, solo la spiegazione (si puo' solo rimuovere se gia' installato da BlackBox)
+            actions.Visibility = locked && !g.OptiByBlackBox ? Visibility.Collapsed : Visibility.Visible;
+            if (locked && g.AntiCheat == "")
+                dAdvice.Text = "BLOCCATO: " + g.Name + " è un gioco a 32 bit e OptiScaler funziona solo con i giochi a 64 bit: installarlo lo farebbe solo andare in crash.";
+            else if (locked)
+            {
+                dAdvice.Text = "BLOCCATO: " + g.Name + " ha un anti-cheat (" + g.AntiCheat + "). Gli anti-cheat controllano le DLL caricate dal gioco: con OptiScaler rischi il BAN dell'account, anche se lo usi una volta sola. BlackBox non permette l'installazione.";
+                if (g.OptiByBlackBox) dAdvice.Text += "\nOptiScaler risulta installato: premi Rimuovi PRIMA di giocare online.";
+            }
             bInstall.IsEnabled = !locked && ver != "" && !g.OptiByBlackBox && !g.OptiByHand;
             bUpdate.IsEnabled = !locked && ver != "" && g.OptiByBlackBox && g.OptiVersion != ver;
             bUpdate.Content = g.OptiByBlackBox && ver != "" && g.OptiVersion != ver ? "Aggiorna a " + ver : "Aggiorna";
@@ -203,6 +215,52 @@ namespace BlackBox
             return "Confronto prima/dopo (medie delle partite; confronta la stessa scena):\n  senza OptiScaler: " + d(without) + "\n  con OptiScaler:   " + d(with);
         }
 
+        // conferma prima di installare: cosa succede e il rischio dei giochi online
+        bool ConfirmInstall()
+        {
+            var g = selected;
+            if (g == null || g.Blocked) return false;
+            int n = 0; try { n = Directory.GetFiles(Opti.PackageDir(LatestCached()), "*", SearchOption.AllDirectories).Length - 3; } catch { }
+            string proxy = (string)proxyBox.SelectedItem ?? "dxgi.dll";
+            string existing = Opti.ExistingProxyInfo(g.ExeDir, proxy);
+            if (existing != null)
+            {
+                var w = MessageBox.Show(win, "Nella cartella del gioco c'è già un file " + proxy + " (" + existing + ").\n\n" +
+                    (existing.IndexOf("ReShade", StringComparison.OrdinalIgnoreCase) >= 0 ? "È ReShade: se lo usi, scegli un altro nome per OptiScaler (es. winmm.dll), così funzionano tutti e due.\n\n" : "Potrebbe essere un'altra mod.\n\n") +
+                    "Se continui, " + proxy + " viene messo da parte (.blackbox-bak) e torna al suo posto con «Rimuovi».\n\nContinuare con " + proxy + "?",
+                    "File già presente", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+                if (w != MessageBoxResult.Yes) { status.Foreground = Orange; status.Text = "Scegli un altro nome della DLL e premi di nuovo Installa."; return false; }
+            }
+            var q = MessageBox.Show(win,
+                "Stai per installare OptiScaler in " + g.Name + ".\n\n" +
+                "PRIMA DI CONTINUARE:\n" +
+                "•  Il gioco deve essere CHIUSO.\n" +
+                "•  Usalo SOLO se giochi a " + g.Name + " offline / in single player. Nelle partite online con altri giocatori puoi essere BANNATO, anche se BlackBox non ha trovato un anti-cheat.\n\n" +
+                "COSA FA BLACKBOX:\n" +
+                "•  Copia circa " + Math.Max(n, 10) + " file nella cartella del gioco:\n   " + g.ExeDir + "\n" +
+                "•  Se il gioco ha già file con lo stesso nome, li mette da parte (.blackbox-bak).\n" +
+                "•  Con «Rimuovi» la cartella torna esattamente com'era.\n\n" +
+                "Confermi che userai " + g.Name + " SOLO offline?",
+                "Installa OptiScaler — leggi prima", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+            if (q != MessageBoxResult.Yes) { status.Foreground = Orange; status.Text = "Non installato. Per i giochi online OptiScaler può costarti il ban: meglio così."; return false; }
+            return true;
+        }
+
+        // dopo l'installazione: come attivarlo nel gioco, passo passo
+        void HowToUse(GameInfo g)
+        {
+            MessageBox.Show(win,
+                "OptiScaler è installato in " + g.Name + ". Ora, nel gioco:\n\n" +
+                "1.  Avvia " + g.Name + ".\n" +
+                "2.  Apri le opzioni grafiche e scegli come upscaler " + (g.Dlss ? "DLSS (ora compare anche sulla tua Radeon)" : g.Xess ? "XeSS" : "FSR 2") + ", con la qualità che preferisci.\n" +
+                "3.  Premi il tasto INIZIO (Home) sulla tastiera: si apre il menu di OptiScaler.\n" +
+                "4.  Nel menu, alla voce «Upscalers», scegli FSR 3.1 / FSR 4 oppure XeSS. Prova e guarda gli FPS nell'overlay di BlackBox.\n" +
+                (g.DlssFg || g.Dlss ? "5.  Generazione di fotogrammi: nel gioco attiva «DLSS Frame Generation»; OptiScaler la trasforma in quella di AMD (sezione «Frame Generation» del menu).\n" : "") +
+                "\nPremi di nuovo Inizio (Home) per chiudere il menu. Le scelte restano salvate.\n\n" +
+                "Se il gioco non parte o va in crash: chiudilo, qui premi Rimuovi e poi reinstalla scegliendo come nome della DLL winmm.dll o version.dll.\n" +
+                "BlackBox controlla da solo, alla prossima partita, che OptiScaler sia attivo.",
+                "Come attivarlo nel gioco", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
         static string BlackBoxDir() { return Path.GetDirectoryName(Settings.Path); }
 
         // ------------------------------------------------ azioni
@@ -218,7 +276,11 @@ namespace BlackBox
                 catch (Exception ex) { msg = "Non riuscito: " + ex.Message; }
                 col.AddEvent(ok ? "INFO" : "WARN", msg);
                 try { Opti.Analyze(g, g.Exe); } catch { }
-                win.Dispatcher.BeginInvoke(new Action(() => { Busy(false, msg); status.Foreground = ok ? Green : Orange; FillList(); ShowDetails(); }));
+                win.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    Busy(false, msg); status.Foreground = ok ? Green : Orange; FillList(); ShowDetails();
+                    if (ok && done == "installato") HowToUse(g);
+                }));
             }) { IsBackground = true }.Start();
         }
 

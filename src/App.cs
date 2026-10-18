@@ -24,9 +24,9 @@ using SD = System.Drawing;
 
 [assembly: AssemblyTitle("BlackBox")]
 [assembly: AssemblyProduct("BlackBox")]
-[assembly: AssemblyVersion("1.2.0.0")]
-[assembly: AssemblyFileVersion("1.2.0.0")]
-[assembly: AssemblyInformationalVersion("1.2.0")]
+[assembly: AssemblyVersion("1.2.1.0")]
+[assembly: AssemblyFileVersion("1.2.1.0")]
+[assembly: AssemblyInformationalVersion("1.2.1")]
 [assembly: AssemblyDescription("BlackBox - la scatola nera del PC, fatta per giocare")]
 
 namespace BlackBox
@@ -154,6 +154,7 @@ namespace BlackBox
             menu.Items.Add("Ultimo report", null, (s, e) => OpenLastReport());
             menu.Items.Add("Ultima sessione di gioco", null, (s, e) => OpenLastSession());
             menu.Items.Add("Giochi && OptiScaler", null, (s, e) => { ShowWindow(); OpenGames(); });
+            menu.Items.Add("Il tuo PC (hardware riconosciuto)", null, (s, e) => ShowMyPc(false));
             menu.Items.Add("Apri cartella log", null, (s, e) => OpenLogs());
             menu.Items.Add("Guida", null, (s, e) => OpenGuide());
             menu.Items.Add(new WF.ToolStripSeparator());
@@ -570,7 +571,7 @@ namespace BlackBox
                     col.GetHistory(10).All(x => double.IsNaN(x.Fg3d) || x.Fg3d < 30))
                 {
                     welcomeShown = true;
-                    if (Hardware.FirstRun) ShowWelcome();
+                    if (Hardware.WelcomePending) ShowWelcome();
                 }
                 if (heldNotices.Count > 0 && !col.Games.InSession)
                 {
@@ -723,23 +724,15 @@ namespace BlackBox
         bool welcomeShown;
         readonly List<string> heldNotices = new List<string>();
 
-        // primo avvio: cosa ha riconosciuto BlackBox e cosa conviene fare
-        void ShowWelcome()
-        {
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine("Benvenuto! BlackBox ha riconosciuto il tuo PC e ha scelto le soglie giuste per questi componenti:");
-            sb.AppendLine();
-            sb.AppendLine(Hardware.Describe());
-            sb.AppendLine();
-            sb.AppendLine("Programmi e impostazioni:");
-            foreach (var it in Hardware.Software()) sb.AppendLine((it.Level == 0 ? "✔  " : "ℹ  ") + it.Text);
-            sb.AppendLine();
-            sb.AppendLine("Da ora registra tutto da solo. Quando giochi parte la sessione di gioco con FPS, overlay (Ctrl+Shift+O) e controllo dello stato.");
-            sb.AppendLine("Se cambi scheda video o aggiorni il driver, BlackBox se ne accorge e si adatta. La guida completa è nel pulsante Guida.");
-            ShowWindow();
-            MessageBox.Show(sb.ToString(), "BlackBox — il tuo PC", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
+        // primo avvio (e menu "Il tuo PC"): cosa ha riconosciuto BlackBox e cosa conviene fare
+        void ShowWelcome() { ShowMyPc(true); }
 
+        void ShowMyPc(bool welcome)
+        {
+            ShowWindow();
+            new StatusWindow(win, col, welcome, fix => OnFpsButton()).ShowDialog();
+            if (welcome) Hardware.WelcomeShown();
+        }
         OptiWindow optiWin;
         void OpenGames()
         {
@@ -749,25 +742,8 @@ namespace BlackBox
             optiWin.Show();
         }
 
-        void ShowHealth()
-        {
-            var items = Health.Check(col);
-            int lv; string sum = Health.Summary(items, out lv);
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine(lv >= 2 ? "C'È UN PROBLEMA: " + sum : lv == 1 ? "ATTENZIONE: " + sum : "TUTTO OK");
-            sb.AppendLine();
-            foreach (var it in items.OrderByDescending(x => x.Level))
-                sb.AppendLine((it.Level >= 2 ? "✖  " : it.Level == 1 ? "⚠  " : it.Level == 0 ? "✔  " : "ℹ  ") + it.Text);
-            sb.AppendLine();
-            sb.AppendLine("PROGRAMMI E IMPOSTAZIONI");
-            foreach (var it in Hardware.Software()) sb.AppendLine((it.Level == 0 ? "✔  " : "ℹ  ") + it.Text);
-            sb.AppendLine();
-            sb.AppendLine("IL TUO PC");
-            sb.AppendLine(Hardware.Describe());
-            sb.AppendLine();
-            sb.AppendLine("Massimi da quando BlackBox è acceso: GPU " + Fmt(col.SessionMaxPower) + " W · hotspot " + Fmt(col.SessionMaxHot) + " °C · in registrazione da " + (int)(DateTime.Now - col.StartedAt).TotalMinutes + " min.");
-            MessageBox.Show(sb.ToString(), "BlackBox — controllo dello stato", MessageBoxButton.OK, lv >= 2 ? MessageBoxImage.Warning : MessageBoxImage.Information);
-        }
+        void ShowHealth() { ShowMyPc(false); }
+
         void SaveSnapshot()
         {
             win.UpdateLayout();

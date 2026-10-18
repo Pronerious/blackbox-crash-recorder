@@ -19,6 +19,8 @@ namespace BlackBox
         public string OptiVersion = "", OptiProxy = "";
         public bool OptiByBlackBox, OptiByHand;
         public bool Vulkan;
+        public bool Is64 = true;   // OptiScaler funziona solo con giochi a 64 bit
+        public bool Blocked { get { return AntiCheat != "" || !Is64; } }
 
         public string Upscalers
         {
@@ -49,6 +51,7 @@ namespace BlackBox
             get
             {
                 if (AntiCheat != "") return "Gioco online con anti-cheat (" + AntiCheat + "): OptiScaler bloccato, rischio ban.";
+                if (!Is64) return "Gioco a 32 bit: OptiScaler funziona solo con i giochi a 64 bit. Bloccato (il gioco non partirebbe).";
                 bool rx9000 = Hardware.Gpu.ToUpperInvariant().Contains("RX 9");
                 if (Fsr31 || Fsr31Vk)
                     return rx9000 ? "Ha già FSR 3.1: basta attivare FSR 4 in Adrenalin, OptiScaler non serve."
@@ -147,6 +150,9 @@ namespace BlackBox
             return list.OrderBy(x => x.Name).ToList();
         }
 
+        // chiave di impostazioni.ini per l'esito di OptiScaler in un gioco ('=' e a capo non possono stare in una chiave)
+        public static string EsitoKey(string dir) { return "opti_esito:" + (dir ?? "").Replace('=', '_').Replace('\r', ' ').Replace('\n', ' ').ToLowerInvariant(); }
+
         public static List<string> ManualFolders() { return Settings.Get("opti_cartelle", "").Split('|').Where(x => x != "").ToList(); }
         public static void AddManualFolder(string dir)
         {
@@ -181,6 +187,7 @@ namespace BlackBox
                            .OrderByDescending(f => { try { return new FileInfo(f).Length; } catch { return 0L; } }).FirstOrDefault();
             if (exe == null) return;
             g.Exe = exe; g.ExeDir = Path.GetDirectoryName(exe);
+            g.Is64 = Is64Bit(exe);
 
             // i file messi da OptiScaler non contano come upscaler del gioco (confronto sul percorso relativo alla cartella dell'eseguibile)
             var man = ReadManifest(g.ExeDir);
@@ -210,7 +217,18 @@ namespace BlackBox
                 else if (n.StartsWith("xigncode") || p.Contains("\\xigncode")) ac.Add("XIGNCODE");
                 else if (p.Contains("\\nprotect") || p.Contains("\\gameguard")) ac.Add("nProtect GameGuard");
                 else if (n.StartsWith("eaanticheat") || p.Contains("\\eaanticheat")) ac.Add("EA AntiCheat");
+                else if (p.Contains("\\anticheatexpert") || n.StartsWith("sguard") || n.StartsWith("ace-base")) ac.Add("ACE (Tencent)");
+                else if (n == "start_protected_game.exe" || n.StartsWith("eac_launcher")) ac.Add("Easy Anti-Cheat");
+                else if (p.Contains("\\equ8") || n.StartsWith("equ8")) ac.Add("EQU8");
+                else if (n.StartsWith("pnkbstr") || p.Contains("\\punkbuster")) ac.Add("PunkBuster");
+                else if (p.Contains("\\faceit")) ac.Add("FACEIT");
+                else if (n.StartsWith("xhunter") || p.Contains("\\wellbia")) ac.Add("XIGNCODE");
+                else if (p.Contains("\\denuvo anti-cheat")) ac.Add("Denuvo Anti-Cheat");
             }
+            // giochi online noti con anti-cheat che non lascia file riconoscibili (es. VAC di Steam) o con ban lato server
+            string exeName = Path.GetFileNameWithoutExtension(g.Exe).ToLowerInvariant(), title = (g.Name ?? "").ToLowerInvariant();
+            string[] known = OnlineGames.FirstOrDefault(k => exeName == k[0] || (k[1] != "" && title.Contains(k[1])));
+            if (known != null && ac.Count == 0) ac.Add(KnownName(known));   // solo se i file non l'hanno gia' rivelato
             g.AntiCheat = string.Join(", ", ac.Distinct());
 
             var m = ReadManifest(g.ExeDir);
@@ -221,6 +239,47 @@ namespace BlackBox
                     string p = Path.Combine(g.ExeDir, pn);
                     if (File.Exists(p) && IsOptiDll(p)) { g.OptiByHand = true; g.OptiProxy = pn; break; }
                 }
+        }
+
+        // { exe senza .exe, parte del nome del gioco, anti-cheat }: giochi online dove una DLL estranea puo' costare il ban
+        static readonly string[][] OnlineGamesList = {
+            new[] { "cs2", "counter-strike", "VAC (Steam)" }, new[] { "csgo", "", "VAC (Steam)" }, new[] { "dota2", "dota 2", "VAC (Steam)" },
+            new[] { "tf_win64", "team fortress", "VAC (Steam)" }, new[] { "project8", "deadlock", "VAC (Steam)" },
+            new[] { "valorant", "valorant", "Vanguard" }, new[] { "league of legends", "league of legends", "Vanguard" },
+            new[] { "fortniteclient-win64-shipping", "fortnite", "Easy Anti-Cheat / BattlEye" }, new[] { "r5apex", "apex legends", "Easy Anti-Cheat" },
+            new[] { "tslgame", "pubg", "BattlEye" }, new[] { "rainbowsix", "rainbow six", "BattlEye" }, new[] { "overwatch", "overwatch", "Defense Matrix" },
+            new[] { "cod", "call of duty", "Ricochet" }, new[] { "destiny2", "destiny 2", "BattlEye" }, new[] { "escapefromtarkov", "escape from tarkov", "BattlEye" },
+            new[] { "marvel-win64-shipping", "marvel rivals", "NetEase" }, new[] { "deltaforceclient-win64-shipping", "delta force", "ACE (Tencent)" },
+            new[] { "discovery", "the finals", "Easy Anti-Cheat" }, new[] { "rustclient", "", "Easy Anti-Cheat" }, new[] { "dayz_x64", "dayz", "BattlEye" },
+            new[] { "bf6", "battlefield", "EA AntiCheat" }, new[] { "bf2042", "", "EA AntiCheat" }, new[] { "fc25", "ea sports fc", "EA AntiCheat" }, new[] { "fc26", "", "EA AntiCheat" },
+            new[] { "rocketleague", "rocket league", "Easy Anti-Cheat" }, new[] { "deadbydaylight-win64-shipping", "dead by daylight", "Easy Anti-Cheat" },
+            new[] { "warframe.x64", "warframe", "anti-cheat di Warframe" }, new[] { "haloinfinite", "halo infinite", "Easy Anti-Cheat" },
+            new[] { "naraka", "naraka", "NetEase" }, new[] { "aces", "war thunder", "Easy Anti-Cheat" }, new[] { "worldoftanks", "world of tanks", "anti-cheat di Wargaming" },
+            new[] { "lostark", "lost ark", "Easy Anti-Cheat" }, new[] { "huntgame", "hunt: showdown", "Easy Anti-Cheat" }, new[] { "gta5", "grand theft auto v", "BattlEye (GTA Online)" },
+            new[] { "fivem", "fivem", "anti-cheat di FiveM" }, new[] { "ragemp", "", "anti-cheat di RAGE:MP" }, new[] { "arma3_x64", "arma 3", "BattlEye" },
+            new[] { "eldenring", "elden ring", "Easy Anti-Cheat" }, new[] { "newworld", "new world", "Easy Anti-Cheat" }, new[] { "thefinals", "", "Easy Anti-Cheat" } };
+        static IEnumerable<string[]> OnlineGames { get { return OnlineGamesList; } }
+        static string KnownName(string[] k) { return k[2] + " (gioco online)"; }
+
+        // intestazione PE dell'eseguibile: OptiScaler esiste solo a 64 bit (x64)
+        public static bool Is64Bit(string exe)
+        {
+            try
+            {
+                using (var fs = File.OpenRead(exe))
+                using (var br = new BinaryReader(fs))
+                {
+                    if (br.ReadUInt16() != 0x5A4D) return true;            // non e' un eseguibile valido ("MZ"): non decido da qui
+                    fs.Seek(0x3C, SeekOrigin.Begin);
+                    int pe = br.ReadInt32();
+                    if (pe <= 0 || pe > fs.Length - 6) return true;
+                    fs.Seek(pe, SeekOrigin.Begin);
+                    if (br.ReadUInt32() != 0x00004550) return true;        // firma "PE\0\0"
+                    ushort machine = br.ReadUInt16();
+                    return machine != 0x014C;                               // 0x14C = x86 a 32 bit; 0x8664 = x64; ARM64 lo lascio passare
+                }
+            }
+            catch { return true; }   // illeggibile: non blocco per questo (gli altri controlli restano)
         }
 
         static int Depth(string root, string f) { return f.Substring(root.Length).Count(c => c == '\\'); }
@@ -240,6 +299,20 @@ namespace BlackBox
                 try { foreach (var d in Directory.GetDirectories(cur.Key)) stack.Push(new KeyValuePair<string, int>(d, cur.Value + 1)); } catch { }
             }
             return res;
+        }
+
+        // descrizione di un file gia' presente con il nome scelto (es. ReShade), per avvisare prima di metterlo da parte
+        public static string ExistingProxyInfo(string exeDir, string proxy)
+        {
+            string p = Path.Combine(exeDir, proxy);
+            if (!File.Exists(p)) return null;
+            try
+            {
+                var v = FileVersionInfo.GetVersionInfo(p);
+                string what = !string.IsNullOrEmpty(v.ProductName) ? v.ProductName : !string.IsNullOrEmpty(v.FileDescription) ? v.FileDescription : "file sconosciuto";
+                return what.Trim();
+            }
+            catch { return "file sconosciuto"; }
         }
 
         public static bool IsOptiDll(string path)
@@ -379,11 +452,15 @@ namespace BlackBox
         public static void Install(GameInfo g, string version, string proxy, bool fakeNvapi, string keepIni)
         {
             if (g.AntiCheat != "") throw new Exception("gioco online con anti-cheat (" + g.AntiCheat + "): rischio ban, installazione bloccata");
+            if (!g.Is64) throw new Exception("gioco a 32 bit: OptiScaler funziona solo con i giochi a 64 bit");
             string running = RunningFrom(g.ExeDir);
             if (running != null) throw new Exception("chiudi prima il gioco (" + running + " è aperto)");
             string pkg = PackageDir(version);
             if (!File.Exists(Path.Combine(pkg, "OptiScaler.dll"))) throw new Exception("pacchetto OptiScaler " + version + " non scaricato");
             if (ReadManifest(g.ExeDir).Version != "") throw new Exception("OptiScaler è già installato: usa Aggiorna o Rimuovi");
+            foreach (var pn in ProxyNames.Concat(new[] { "OptiScaler.asi" }))
+                if (File.Exists(Path.Combine(g.ExeDir, pn)) && IsOptiDll(Path.Combine(g.ExeDir, pn)))
+                    throw new Exception("c'è già un OptiScaler installato a mano (" + pn + "): toglilo prima con Remove_OptiScaler.bat nella cartella del gioco");
 
             var m = new Manifest { Version = version, Proxy = proxy, Date = DateTime.Now.ToString("yyyy-MM-dd HH:mm") };
             var skip = new[] { "setup_windows.bat", "setup_linux.sh" };

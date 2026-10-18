@@ -243,6 +243,9 @@ namespace BlackBox
         volatile bool running;
         volatile string stopReason = "BlackBox chiuso";
         public volatile bool WindowHidden = true;   // la finestra principale e' chiusa: si puo' liberare memoria
+        volatile bool pollSoon;
+        // legge il Registro eventi entro 5 s (es. il gioco si e' appena chiuso: e' andato in crash?)
+        public void PollEventsSoon() { pollSoon = true; }
         DateTime nextTrim = DateTime.Now.AddMinutes(2);
 
         // restituisce a Windows la memoria non usata (utile prima di una partita e con la finestra chiusa)
@@ -299,7 +302,8 @@ namespace BlackBox
             AddEvent("INFO", reason);
             stopReason = reason;
             running = false;
-            try { if (thread != null) thread.Join(2000); } catch { }
+            // fino a 8 s: se si sta giocando, il registratore chiude PresentMon e scrive il report di fine partita
+            try { if (thread != null) thread.Join(8000); } catch { }
             lock (evLock) { try { if (csv != null) csv.Dispose(); } catch { } csv = null; }
         }
 
@@ -383,6 +387,7 @@ namespace BlackBox
                 // in partita BlackBox si alleggerisce: elenco dei processi ogni 5 s e Registro eventi ogni 30 s
                 bool gaming = Games.InSession;
                 if (now >= nextProc) { topCpu = TopCpuProcess(); nextProc = now.AddSeconds(gaming ? 5 : 2); }
+                if (pollSoon) { pollSoon = false; if (nextEvPoll > now.AddSeconds(5)) nextEvPoll = now.AddSeconds(5); }
                 if (now >= nextEvPoll) { PollEvents(ref evSince); nextEvPoll = now.AddSeconds(gaming ? 30 : 10); }
                 if (now >= nextTrim) { if (WindowHidden) TrimMemory(); nextTrim = now.AddMinutes(10); }
 
