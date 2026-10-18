@@ -16,5 +16,5 @@ desktop.ini
 .vscode/
 .claude/
 
-# cartella per il progetto su claude.ai (si rifà con per-claude-ai.ps1)
-per-claude-ai/
+# cartella per il progetto su claude.ai (si rifa' con per-claude-ai.ps1; i testi fissi stanno in docs/per-claude-ai)
+/per-claude-ai/
