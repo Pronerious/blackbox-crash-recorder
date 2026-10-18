@@ -3,6 +3,13 @@
 I file di ogni versione (installer, exe portatile, guida) sono nella pagina
 [Releases](https://github.com/Pronerious/blackbox-crash-recorder/releases).
 
+## 1.2.6 — 18/10/2026
+- **Emulatori riconosciuti** (PCSX2, RetroArch, DuckStation, PPSSPP, RPCS3, Dolphin, Cemu, Ryujinx, Xenia, Xemu e altri): overlay e FPS anche se usano poco la scheda video.
+- **Giochi a schermo intero** (o senza bordi) riconosciuti dal 15% di scheda video; browser, lettori video e app ingrandite esclusi.
+- **Overlay e FPS più rapidi**: la sessione parte in 5 secondi (schermo intero ed emulatori) o 8 (gli altri), non più 20.
+- Con più monitor l'overlay compare **sul monitor del gioco**.
+- Corretto l'errore «il thread chiamante non riesce ad accedere a questo oggetto» installando OptiScaler (non veniva copiato nessun file).
+
 ## 1.2.5 — 18/10/2026
 - Dopo aver svuotato la cartella dei log (o al primo avvio) non compare più il riquadro rosso per un vecchio spegnimento di cui BlackBox non ha dati: lo spegnimento resta comunque nello storico.
 

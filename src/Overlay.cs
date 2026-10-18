@@ -238,17 +238,35 @@ namespace BlackBox
                 // alcuni giochi si mettono sopra: ogni 3 s l'overlay torna in cima, senza prendere il focus
                 var h = new WindowInteropHelper(win).Handle;
                 if (h != IntPtr.Zero) SetWindowPos(h, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                Place();   // segue il gioco se cambia monitor
             }
         }
 
-        // sullo schermo principale (dove di solito c'e' il gioco), a 12 pixel dal bordo
+        // sul monitor dove c'e' il gioco (con piu' monitor), altrimenti sullo schermo principale; a 12 pixel dal bordo
         void Place()
         {
             if (!win.IsVisible) return;
-            double W = SystemParameters.PrimaryScreenWidth, H = SystemParameters.PrimaryScreenHeight, m = 12;
+            double X = 0, Y = 0, W = SystemParameters.PrimaryScreenWidth, H = SystemParameters.PrimaryScreenHeight, m = 12;
+            try
+            {
+                var g = col.Games.Current;
+                IntPtr gameWnd = IntPtr.Zero;
+                if (g != null) using (var p = System.Diagnostics.Process.GetProcessById(g.Pid)) gameWnd = p.MainWindowHandle;
+                var src = PresentationSource.FromVisual(win);
+                if (gameWnd != IntPtr.Zero && src != null && src.CompositionTarget != null)
+                {
+                    var b = System.Windows.Forms.Screen.FromHandle(gameWnd).Bounds;   // pixel
+                    var toDip = src.CompositionTarget.TransformFromDevice;
+                    Point tl = toDip.Transform(new Point(b.Left, b.Top)), br = toDip.Transform(new Point(b.Right, b.Bottom));
+                    X = tl.X; Y = tl.Y; W = br.X - tl.X; H = br.Y - tl.Y;
+                }
+            }
+            catch { }
             string c = Corner;
-            win.Left = c.EndsWith("destra") ? W - win.ActualWidth - m : c.EndsWith("centro") ? (W - win.ActualWidth) / 2 : m;
-            win.Top = c.StartsWith("basso") ? H - win.ActualHeight - m : m;
+            double left = c.EndsWith("destra") ? W - win.ActualWidth - m : c.EndsWith("centro") ? (W - win.ActualWidth) / 2 : m;
+            double top = c.StartsWith("basso") ? H - win.ActualHeight - m : m;
+            if (Math.Abs(win.Left - (X + left)) > 0.5) win.Left = X + left;
+            if (Math.Abs(win.Top - (Y + top)) > 0.5) win.Top = Y + top;
         }
 
         // ------------------------------------------------ contenuto

@@ -32,6 +32,7 @@ namespace BlackBox
         public string OptiScaler = "";
         // solo in memoria: processo in primo piano e suo uso della GPU 3D (per le sessioni di gioco)
         public int ForegroundPid;
+        public bool FgFullscreen;   // la finestra in primo piano copre tutto lo schermo (gioco a schermo intero o senza bordi)
         public double Fg3d = double.NaN;
     }
 
@@ -222,6 +223,29 @@ namespace BlackBox
         [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
         [DllImport("psapi.dll")] public static extern bool EmptyWorkingSet(IntPtr h);
+        [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
+        [StructLayout(LayoutKind.Sequential)] public struct MONITORINFO { public int cbSize; public RECT Monitor, Work; public uint Flags; }
+        [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+        [DllImport("user32.dll")] public static extern IntPtr MonitorFromWindow(IntPtr h, uint flags);
+        [DllImport("user32.dll")] public static extern bool GetMonitorInfo(IntPtr m, ref MONITORINFO mi);
+        [DllImport("user32.dll")] public static extern IntPtr GetShellWindow();
+        [DllImport("user32.dll")] public static extern int GetWindowLongW(IntPtr h, int idx);
+
+        // la finestra copre l'intero monitor su cui si trova (schermo intero vero o finestra senza bordi)
+        public static bool IsFullscreen(IntPtr h)
+        {
+            try
+            {
+                if (h == IntPtr.Zero || h == GetShellWindow()) return false;
+                // una finestra ingrandita copre lo schermo ma ha la barra del titolo: non e' un gioco a schermo intero
+                if ((GetWindowLongW(h, -16) & 0x00C00000) == 0x00C00000) return false;   // GWL_STYLE, WS_CAPTION
+                RECT w; if (!GetWindowRect(h, out w)) return false;
+                var mi = new MONITORINFO { cbSize = Marshal.SizeOf(typeof(MONITORINFO)) };
+                if (!GetMonitorInfo(MonitorFromWindow(h, 2), ref mi)) return false;
+                return w.L <= mi.Monitor.L && w.T <= mi.Monitor.T && w.R >= mi.Monitor.R && w.B >= mi.Monitor.B;
+            }
+            catch { return false; }
+        }
     }
 
     // ---------------------------------------------------------------- Collector
@@ -453,8 +477,10 @@ namespace BlackBox
         {
             var s = new Sample { Time = now };
             uint fgPid = 0;
-            try { Native.GetWindowThreadProcessId(Native.GetForegroundWindow(), out fgPid); } catch { }
+            IntPtr fgWnd = IntPtr.Zero;
+            try { fgWnd = Native.GetForegroundWindow(); Native.GetWindowThreadProcessId(fgWnd, out fgPid); } catch { }
             s.ForegroundPid = (int)fgPid;
+            s.FgFullscreen = Native.IsFullscreen(fgWnd);
             if (q != IntPtr.Zero)
             {
                 Pdh.PdhCollectQueryData(q);

@@ -94,8 +94,18 @@ namespace BlackBox
             actions.Children.Add(qRow);
             actions.Children.Add(helpBox);
             var btns = new WrapPanel { Margin = new Thickness(-8, 10, 0, 0) };
-            bInstall = new Button { Content = "Installa" }; bInstall.Click += (s, e) => { if (ConfirmInstall()) Run("Installo", g => Opti.Install(g, LatestCached(), (string)proxyBox.SelectedItem, fakeCheck.IsChecked == true, null), "installato"); };
-            bUpdate = new Button { Content = "Aggiorna" }; bUpdate.Click += (s, e) => Run("Aggiorno", g => Opti.Update(g, LatestCached(), fakeCheck.IsChecked == true), "aggiornato (impostazioni tenute)");
+            bInstall = new Button { Content = "Installa" }; bInstall.Click += (s, e) =>
+            {
+                if (!ConfirmInstall()) return;
+                // le scelte si leggono QUI, nella finestra: il lavoro poi gira in un altro thread che non puo' toccare i controlli
+                string ver = LatestCached(), proxy = (string)proxyBox.SelectedItem ?? "dxgi.dll"; bool fake = fakeCheck.IsChecked == true;
+                Run("Installo", g => Opti.Install(g, ver, proxy, fake, null), "installato");
+            };
+            bUpdate = new Button { Content = "Aggiorna" }; bUpdate.Click += (s, e) =>
+            {
+                string ver = LatestCached(); bool fake = fakeCheck.IsChecked == true;
+                Run("Aggiorno", g => Opti.Update(g, ver, fake), "aggiornato (impostazioni tenute)");
+            };
             bRemove = new Button { Content = "Rimuovi" }; bRemove.Click += (s, e) => Run("Rimuovo", g => Opti.Remove(g), "rimosso: la cartella del gioco è tornata com'era");
             bFolder = new Button { Content = "Apri cartella" }; bFolder.Click += (s, e) => { if (selected != null) try { Process.Start("explorer.exe", "\"" + selected.ExeDir + "\""); } catch { } };
             btns.Children.Add(bInstall); btns.Children.Add(bUpdate); btns.Children.Add(bRemove); btns.Children.Add(bFolder);

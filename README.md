@@ -61,8 +61,10 @@ sistema.
 
 ### Quando giochi (parte da solo)
 
-- **Sessione di gioco**: si apre quando il gioco in primo piano usa la GPU oltre il 60%
-  per 20 s; a fine partita scrive un **report** (`sessione_<gioco>_<data>.txt`).
+- **Sessione di gioco**: parte da sola in 5 secondi per i giochi a schermo intero e gli
+  **emulatori** (PCSX2, RetroArch, DuckStation, PPSSPP, RPCS3, Dolphin, Cemu, Ryujinx...),
+  in 8 secondi per gli altri giochi; a fine partita scrive un **report**
+  (`sessione_<gioco>_<data>.txt`).
 - **FPS, 1% low e frame time** con PresentMon di Intel. I momenti con il gioco in secondo
   piano (Alt+Tab) non contano.
 - **Se il gioco scatta, dice perché e cosa fare**: inizio partita (shader), VRAM piena,
@@ -71,7 +73,7 @@ sistema.
 - **Generazione di fotogrammi riconosciuta** (FSR 3, DLSS/XeSS FG): mostra anche gli
   **FPS reali**, cioè quelli calcolati davvero.
 - **Overlay in gioco**: blocco o barra, 6 posizioni, colori, sfondo e righe a scelta,
-  tasto rapido Ctrl+Shift+O. Non entra dentro il gioco (nessuna DLL iniettata), quindi
+  tasto rapido Ctrl+Shift+O, sul monitor dove c'è il gioco. Non entra dentro il gioco (nessuna DLL iniettata), quindi
   niente conflitti con gli anti-cheat; il gioco resta in *Independent Flip*.
 - **Undervolt / overclock**: stabilità (crash del driver, crash del gioco, throttling
   da calore), **efficienza in FPS reali per watt** confrontata con le tue partite
@@ -145,7 +147,7 @@ sistema.
 
 Scarica dalla pagina **[Releases](../../releases)**:
 
-- **`BlackBox-Setup-1.2.5.exe`** (consigliato): installa BlackBox per il tuo utente
+- **`BlackBox-Setup-1.2.6.exe`** (consigliato): installa BlackBox per il tuo utente
   in `%LocalAppData%\Programs\BlackBox`, **senza amministratore**, con collegamento nel
   menu Start, avvio automatico e disinstallazione da *Impostazioni → App*. Se BlackBox
   è già installato, prima lo disinstalla del tutto e poi installa la versione nuova; i tuoi

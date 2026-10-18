@@ -211,9 +211,11 @@ Ctrl + Shift + O) e che ci sia una sessione di gioco in corso. Se il gioco è in
 **schermo intero esclusivo**, nelle opzioni video scegli **finestra senza bordi**
 (*borderless*): in schermo intero esclusivo nessun overlay esterno può apparire.
 
-**Non parte la sessione di gioco.** Parte solo se il gioco è in primo piano e usa la
-scheda video oltre il 60% per 20 secondi. Giochi molto leggeri (o con FPS bloccati
-bassi) possono restare sotto: è normale.
+**Non parte la sessione di gioco.** Parte se il gioco è in primo piano e: è a schermo
+intero (almeno 15% di scheda video), oppure è un emulatore conosciuto, oppure usa la
+scheda video oltre il 60%. Un gioco molto leggero in finestra può restare sotto: mettilo
+a schermo intero (o senza bordi), oppure attiva *Mostra anche fuori dai giochi*
+dell'overlay.
 
 **Un gioco si chiude all'avvio.** Alcuni giochi online con anti-cheat non vogliono
 programmi che leggono i sensori. Chiudi BlackBox dal tasto destro → *Esci* prima
@@ -235,10 +237,18 @@ chiude: va chiuso a mano da Gestione attività (Ctrl + Shift + Esc).
 
 ## 10. Sessioni di gioco
 
-Non devi fare niente: BlackBox capisce da solo quando giochi. La sessione **parte**
-quando il programma in primo piano usa la scheda video oltre il 60% per più di
-20 secondi, e **finisce** quando chiudi il gioco o lo lasci in secondo piano per più
-di un minuto. Nella finestra la vedi alla riga *Sessione di gioco*.
+Non devi fare niente: BlackBox capisce da solo quando giochi. La sessione (con overlay
+e FPS) **parte**:
+
+- dopo **5 secondi** se il gioco è a **schermo intero** (o finestra senza bordi) e usa la
+  scheda video almeno al 15%;
+- dopo **5 secondi** se è un **emulatore** (PCSX2, RetroArch, DuckStation, PPSSPP, RPCS3,
+  Dolphin, Cemu, Ryujinx, Xenia, Xemu e altri), anche se usa pochissimo la scheda video;
+- dopo **8 secondi** negli altri casi, se il programma in primo piano usa la scheda video
+  oltre il 60%.
+
+Browser, lettori video e app ingrandite non contano come giochi. La sessione **finisce**
+quando chiudi il gioco o lo lasci in secondo piano per più di un minuto. Nella finestra la vedi alla riga *Sessione di gioco*.
 
 A fine partita trovi il report (tasto destro sull'icona → **Ultima sessione di
 gioco**). Dentro c'è:
@@ -410,8 +420,12 @@ CPU con l'overlay acceso.
 Il tasto rapido si può cambiare in `impostazioni.ini`, riga `overlay_tasto=`
 (per esempio `Ctrl+Alt+F10`), con BlackBox chiuso.
 
+Con più monitor l'overlay compare **sul monitor dove c'è il gioco**.
+
 **Limite:** nei giochi in *schermo intero esclusivo* l'overlay non appare; scegli
-*finestra senza bordi* (borderless) nelle opzioni video del gioco.
+*finestra senza bordi* (borderless) nelle opzioni video del gioco. Vale anche per gli
+emulatori: in PCSX2, DuckStation, RetroArch ecc. usa lo schermo intero «senza bordi» /
+«borderless», non quello «esclusivo».
 
 ## 14. Controllo dello stato e UV/OC
 

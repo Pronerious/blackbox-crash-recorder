@@ -46,12 +46,12 @@ namespace BlackBox
     }
 
     // Riconosce le sessioni di gioco e controlla la stabilita' (throttling, reset del tuning di Adrenalin).
-    //   inizio : processo in primo piano che usa la GPU (3D) oltre il 60% per piu' di 20 s
+    //   inizio : processo in primo piano che usa la GPU (3D) oltre il 60% per 8 s; emulatori (per nome) e giochi a schermo intero in 5 s
     //   fine   : il gioco si chiude, oppure resta in secondo piano per piu' di 60 s
     // Gira nel thread del Collector: OnSample ogni secondo, OnTdr/OnAppError dal Registro eventi.
     public class GameTracker
     {
-        const double StartGpu = 60, StartSecs = 20, BackgroundSecs = 60, ExitWaitSecs = 15;
+        const double StartGpu = 60, StartSecs = 8, BackgroundSecs = 60, ExitWaitSecs = 15;
         const double LoadGpu = 90, ThrottleGpu = 95, ThrottleRatio = 0.85; const int ThrottleSecs = 5;
         const int TuningSamples = 60; const double TuningMv = 35, TuningClk = 0.06;
 
@@ -147,9 +147,35 @@ namespace BlackBox
             if (current != null) Close(reason);
         }
 
+        // Emulatori: usano poco la scheda video (spesso meno del 60%), quindi si riconoscono per nome
+        static readonly HashSet<string> Emulators = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+            "pcsx2", "pcsx2-qt", "pcsx2-qtx64", "pcsx2-qtx64-avx2", "retroarch", "duckstation", "duckstation-qt-x64-ReleaseLTCG", "duckstation-qt",
+            "ppsspp", "ppssppwindows", "ppssppwindows64", "rpcs3", "dolphin", "dolphin-emu", "cemu", "ryujinx", "yuzu", "suyu", "sudachi", "citron",
+            "xenia", "xenia_canary", "xemu", "citra", "citra-qt", "lime3ds", "azahar", "melonds", "mame", "mame64", "redream", "flycast", "vita3k",
+            "shadps4", "mgba", "snes9x", "snes9x-x64", "bsnes", "mesen", "project64", "simple64-gui", "rmg", "fceux", "epsxe", "epsxe64", "pcsx", "nostalgia" };
+        // a schermo intero ma non giochi: browser e lettori video
+        static readonly HashSet<string> FullscreenNotGames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+            "chrome", "msedge", "firefox", "brave", "librewolf", "opera", "vivaldi", "vlc", "mpc-hc64", "mpc-be64", "mpv", "kodi", "PotPlayerMini64",
+            "Spotify", "Discord", "obs64", "Teams", "ms-teams", "Zoom", "WINWORD", "EXCEL", "POWERPNT", "Photos", "Video.UI", "ApplicationFrameHost",
+            // app che disegnano da sole la cornice (senza barra del titolo di Windows) quando sono ingrandite
+            "claude", "Code", "slack", "Notion", "WhatsApp", "Telegram", "steamwebhelper", "steam", "EpicGamesLauncher", "GalaxyClient", "Battle.net",
+            "EADesktop", "UbisoftConnect", "upc", "RockstarLauncher", "explorer", "msedgewebview2", "SteelSeriesGG", "RadeonSoftware", "AMDRSServ" };
+        const double StartGpuFullscreen = 15;   // a schermo intero basta il 15% di scheda video
+        const double StartSecsFast = 5;         // emulatori e giochi a schermo intero: la sessione (con overlay e FPS) parte in 5 s
+
+        // perche' questo programma conta come gioco? soglia di GPU e secondi necessari
+        static bool LooksLikeGame(Sample s, out double needGpu, out double needSecs)
+        {
+            if (Emulators.Contains(s.Foreground)) { needGpu = 0.5; needSecs = StartSecsFast; return true; }
+            if (s.FgFullscreen && !FullscreenNotGames.Contains(s.Foreground)) { needGpu = StartGpuFullscreen; needSecs = StartSecsFast; return true; }
+            needGpu = StartGpu; needSecs = StartSecs; return true;
+        }
+
         void DetectStart(Sample s)
         {
-            bool busy = !double.IsNaN(s.Fg3d) && s.Fg3d > StartGpu;
+            double needGpu, needSecs;
+            LooksLikeGame(s, out needGpu, out needSecs);
+            bool busy = !double.IsNaN(s.Fg3d) && s.Fg3d > needGpu;
             if (s.ForegroundPid == 0 || s.ForegroundPid == selfPid || NotGames.Contains(s.Foreground)) { candPid = 0; return; }
             if (s.ForegroundPid != candPid)
             {
@@ -161,9 +187,8 @@ namespace BlackBox
             candSamples.Add(s);
             if (busy) candMiss = 0;
             else if (++candMiss > 3) { candPid = 0; candSamples.Clear(); return; }   // tollera brevi cali (caricamenti)
-            if ((s.Time - candSince).TotalSeconds >= StartSecs) Open(s);
+            if ((s.Time - candSince).TotalSeconds >= needSecs) Open(s);
         }
-
         void Open(Sample s)
         {
             var c = new GameSession { Game = s.Foreground, Pid = s.ForegroundPid, Start = candSince, LastFg = s.Time, Config = Analyzer.ConfigAt(dir, candSince) };
