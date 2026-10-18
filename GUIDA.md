@@ -533,6 +533,9 @@ BlackBox **blocca da solo**:
 - i giochi online noti anche se l'anti-cheat non lascia file (per esempio
   Counter-Strike 2, Dota 2 e gli altri con VAC di Steam, Call of Duty, Fortnite,
   Valorant, Apex, PUBG, Rainbow Six, GTA V, Battlefield, EA FC...);
+- i giochi **sempre online** con classifiche e controlli sul server, dove il ban arriva
+  all'account anche senza anti-cheat sul PC: **Forza Horizon** e Forza Motorsport, The
+  Crew, Diablo IV, World of Warcraft, Path of Exile, Genshin Impact, Helldivers 2, Wardogs...;
 - i giochi **a 32 bit**, dove OptiScaler non può funzionare.
 
 Per questi giochi non compare nessun pulsante. **Se un gioco non bloccato lo usi

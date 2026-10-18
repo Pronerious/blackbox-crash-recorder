@@ -127,7 +127,7 @@ sistema.
   OptiScaler serve.
 - **Blocca da solo i giochi con anti-cheat** (Easy Anti-Cheat, BattlEye, EA AntiCheat,
   Vanguard, ACE...), i **giochi online noti** anche senza file di anti-cheat (es. VAC di
-  Steam) e i giochi **a 32 bit**: nessun pulsante, rischio ban azzerato. Prima di ogni
+  Steam, Forza Horizon e gli altri sempre online con controlli sul server) e i giochi **a 32 bit**: nessun pulsante, rischio ban azzerato. Prima di ogni
   installazione chiede conferma che il gioco si usi offline e avvisa se c'è già un'altra
   mod (es. ReShade).
 - **Consiglia il nome della DLL giusto per ogni gioco** (dxgi.dll, winmm.dll per
@@ -167,7 +167,7 @@ sistema.
 
 Scarica dalla pagina **[Releases](../../releases)**:
 
-- **`BlackBox-Setup-1.2.8.exe`** (consigliato): installa BlackBox per il tuo utente
+- **`BlackBox-Setup-1.2.9.exe`** (consigliato): installa BlackBox per il tuo utente
   in `%LocalAppData%\Programs\BlackBox`, **senza amministratore**, con collegamento nel
   menu Start, avvio automatico e disinstallazione da *Impostazioni → App*. Se BlackBox
   è già installato, prima lo disinstalla del tutto e poi installa la versione nuova; i tuoi

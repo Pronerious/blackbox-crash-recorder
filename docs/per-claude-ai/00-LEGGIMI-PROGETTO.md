@@ -33,7 +33,7 @@ WPF scura, testi in italiano) che:
 
 Proprietario: non è un programmatore. PC: Ryzen 7 7800X3D, Radeon RX 7800 XT Sapphire Nitro+,
 32 GB, Windows 11. Repository: https://github.com/Pronerious/blackbox-crash-recorder
-(branch `main`). Versione attuale: **1.2.8** (release del 18/10/2026).
+(branch `main`). Versione attuale: **1.2.9** (release del 18/10/2026).
 
 ## Regole fisse
 
@@ -116,7 +116,7 @@ I limiti per modello stanno in `data/limiti.json` (verificati sulle pagine uffic
 
 ## Situazione al 18/10/2026
 
-- **Versione 1.2.8** pubblicata; il repository è **pubblico** (dal 18/10, storia controllata: nessun dato
+- **Versione 1.2.9** pubblicata; il repository è **pubblico** (dal 18/10, storia controllata: nessun dato
   personale). Le novità di ogni versione sono in `CHANGELOG.md`.
 - BlackBox è **installato** sul PC dell'utente con l'installer (`%LocalAppData%\Programs\BlackBox`, avvio
   automatico da lì). La cartella `dist\` del progetto serve solo per compilare.

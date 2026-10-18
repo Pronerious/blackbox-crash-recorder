@@ -3,6 +3,9 @@
 I file di ogni versione (installer, exe portatile, guida) sono nella pagina
 [Releases](https://github.com/Pronerious/blackbox-crash-recorder/releases).
 
+## 1.2.9 — 19/10/2026
+- OptiScaler bloccato anche nei giochi **sempre online con controlli sul server** (ban dell'account anche senza anti-cheat sul PC): **Forza Horizon 4/5/6**, Forza Motorsport, The Crew Motorfest, Diablo IV, World of Warcraft, Path of Exile, Black Desert, Genshin Impact, Honkai: Star Rail, Zenless Zone Zero, Wuthering Waves, Helldivers 2, Throne and Liberty, Wardogs. Prima Forza Horizon 6 non era bloccato.
+
 ## 1.2.8 — 18/10/2026
 - **Niente più falsi confronti di efficienza.** Le partite brevi (meno di 5 minuti, spesso solo menu con FPS bloccati e pochi watt) non contano più come base di confronto. Prima una partita normale di 2 ore poteva risultare «-35%» senza motivo.
 - L'efficienza (FPS per watt) conta solo i secondi in cui si gioca davvero, non menu e caricamenti.
