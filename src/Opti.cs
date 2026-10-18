@@ -259,12 +259,12 @@ namespace BlackBox
             new[] { "fivem", "fivem", "anti-cheat di FiveM" }, new[] { "ragemp", "", "anti-cheat di RAGE:MP" }, new[] { "arma3_x64", "arma 3", "BattlEye" },
             new[] { "eldenring", "elden ring", "Easy Anti-Cheat" }, new[] { "newworld", "new world", "Easy Anti-Cheat" }, new[] { "thefinals", "", "Easy Anti-Cheat" },
             // sempre online con classifiche e controlli lato server (ban dell'account anche senza file di anti-cheat)
-            new[] { "forzahorizon6", "forza horizon", "controlli online di Forza (Playground Games)" }, new[] { "forzahorizon5", "", "controlli online di Forza (Playground Games)" },
-            new[] { "forzahorizon4", "", "controlli online di Forza (Playground Games)" }, new[] { "forza_steamworks_release_final", "forza motorsport", "controlli online di Forza (Turn 10)" },
-            new[] { "thecrewmotorfest", "the crew", "anti-cheat di Ubisoft" }, new[] { "diablo iv", "diablo iv", "Warden (Blizzard)" }, new[] { "wow", "world of warcraft", "Warden (Blizzard)" },
+            new[] { "forzahorizon6", "forza horizon", "controlli online di Playground Games" }, new[] { "forzahorizon5", "", "controlli online di Playground Games" },
+            new[] { "forzahorizon4", "", "controlli online di Playground Games" }, new[] { "forza_steamworks_release_final", "forza motorsport", "controlli online di Turn 10" },
+            new[] { "thecrewmotorfest", "the crew", "anti-cheat di Ubisoft" }, new[] { "diablo iv", "diablo iv", "Warden di Blizzard" }, new[] { "wow", "world of warcraft", "Warden di Blizzard" },
             new[] { "pathofexile_x64steam", "path of exile", "controlli online di Grinding Gear" }, new[] { "blackdesert64", "black desert", "XIGNCODE / EAC" },
             new[] { "genshinimpact", "genshin impact", "anti-cheat di HoYoverse" }, new[] { "starrail", "honkai: star rail", "anti-cheat di HoYoverse" }, new[] { "zenlesszonezero", "zenless zone zero", "anti-cheat di HoYoverse" },
-            new[] { "client-win64-shipping", "wuthering waves", "ACE (Kuro)" }, new[] { "helldivers2", "helldivers", "nProtect GameGuard" }, new[] { "throneandliberty", "throne and liberty", "Easy Anti-Cheat" },
+            new[] { "client-win64-shipping", "wuthering waves", "ACE di Kuro Games" }, new[] { "helldivers2", "helldivers", "nProtect GameGuard" }, new[] { "throneandliberty", "throne and liberty", "Easy Anti-Cheat" },
             new[] { "wardogsclient-win64-shipping", "wardogs", "controlli online di Wardogs" } };
         static IEnumerable<string[]> OnlineGames { get { return OnlineGamesList; } }
         static string KnownName(string[] k) { return k[2] + " (gioco online)"; }
