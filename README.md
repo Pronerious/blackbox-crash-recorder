@@ -145,7 +145,7 @@ sistema.
 
 Scarica dalla pagina **[Releases](../../releases)**:
 
-- **`BlackBox-Setup-1.2.4.exe`** (consigliato): installa BlackBox per il tuo utente
+- **`BlackBox-Setup-1.2.5.exe`** (consigliato): installa BlackBox per il tuo utente
   in `%LocalAppData%\Programs\BlackBox`, **senza amministratore**, con collegamento nel
   menu Start, avvio automatico e disinstallazione da *Impostazioni → App*. Se BlackBox
   è già installato, prima lo disinstalla del tutto e poi installa la versione nuova; i tuoi

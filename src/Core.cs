@@ -862,6 +862,9 @@ namespace BlackBox
                 return ci;
             }
             ci.IsNew = true;
+            // senza il file di stato (primo avvio, oppure cartella dei log svuotata) BlackBox non sa se questo spegnimento
+            // l'ha gia' mostrato: lo registra, ma il riquadro rosso compare solo se e' recente e ci sono dati da mostrare
+            bool noMemory = !File.Exists(stateFile);
             File.WriteAllText(stateFile, ci.RecordId.ToString());
 
             // raccoglie le righe del CSV precedenti al riavvio (giorno del crash + giorno prima)
@@ -900,6 +903,7 @@ namespace BlackBox
             sb.AppendLine("Configurazione attiva:   " + (ci.Config == "" ? "(non indicata)" : ci.Config));
 
             var cols = header.Split(';');
+            if (noMemory && (rows.Count == 0 || (DateTime.Now - ci.BootTime).TotalHours > 24)) ci.IsNew = false;   // niente avviso: nessun dato o spegnimento vecchio
             if (rows.Count == 0)
             {
                 sb.AppendLine();

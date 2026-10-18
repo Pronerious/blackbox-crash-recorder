@@ -3,6 +3,9 @@
 I file di ogni versione (installer, exe portatile, guida) sono nella pagina
 [Releases](https://github.com/Pronerious/blackbox-crash-recorder/releases).
 
+## 1.2.5 — 18/10/2026
+- Dopo aver svuotato la cartella dei log (o al primo avvio) non compare più il riquadro rosso per un vecchio spegnimento di cui BlackBox non ha dati: lo spegnimento resta comunque nello storico.
+
 ## 1.2.4 — 18/10/2026
 - Riconosce il **limite delle 12 ore di HWiNFO gratuito** (la temperatura della CPU sparisce) e lo spiega.
 - **Riavvio automatico di HWiNFO** facoltativo: consenso di Windows una volta, poi BlackBox lo riavvia da solo quando servono, mai durante una partita.

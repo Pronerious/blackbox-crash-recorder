@@ -186,6 +186,10 @@ Tutto sta in `Documenti\BlackBox`:
 
 ## 8. Problemi e soluzioni
 
+**Ho svuotato la cartella dei log: comparirà di nuovo l'avviso di un vecchio spegnimento?**
+No. Se BlackBox non ha dati di quello spegnimento (o è più vecchio di un giorno), lo mette
+nello storico senza riquadro rosso.
+
 **Il report dice "BlackBox non era attivo".** Il programma era chiuso. Metti
 *Avvio automatico* su ON.
 
