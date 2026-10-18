@@ -124,6 +124,13 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 
 Crea `dist\BlackBox.exe` e l'installer `dist\BlackBox-Setup-<versione>.exe`.
 
+### Parlarne con Claude (claude.ai)
+
+`powershell -ExecutionPolicy Bypass -File .\per-claude-ai.ps1` prepara la cartella
+`per-claude-ai\` (solo sul PC) con codice, guida e scheda del progetto. Le istruzioni per
+creare il progetto su claude.ai sono in
+[docs/per-claude-ai/00-LEGGIMI-PROGETTO.md](docs/per-claude-ai/00-LEGGIMI-PROGETTO.md).
+
 ## Uso
 
 La guida completa, passo passo, è in **[GUIDA.md](GUIDA.md)** e si apre anche dal
