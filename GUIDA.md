@@ -41,8 +41,9 @@ programma: pulsante **Guida** in alto, oppure tasto destro sull'icona → **Guid
    tuo utente, **senza permessi di amministratore**, in
    `%LocalAppData%\Programs\BlackBox`, con il collegamento nel menu Start e l'avvio
    automatico con Windows.
-3. Per aggiornare basta aprire l'installer della versione nuova: chiude BlackBox, lo
-   aggiorna e tiene i tuoi dati.
+3. Per aggiornare basta aprire l'installer della versione nuova: chiude BlackBox,
+   **disinstalla del tutto la versione vecchia** e installa la nuova da zero. I tuoi dati
+   restano.
 4. Per disinstallare: **Impostazioni → App → BlackBox → Disinstalla**. I tuoi dati in
    `Documenti\BlackBox` restano.
 

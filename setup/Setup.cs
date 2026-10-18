@@ -79,7 +79,7 @@ namespace BlackBoxSetup
             sp.Children.Add(new TextBlock { Text = "BlackBox " + Version, FontSize = 24, FontWeight = FontWeights.SemiBold });
             sp.Children.Add(new TextBlock { Text = "la scatola nera del tuo PC, fatta per giocare", Foreground = Muted, Margin = new Thickness(0, 0, 0, 14) });
             sp.Children.Add(new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12),
-                Text = update ? "BlackBox " + old + " è già installato: " + (old == Version ? "verrà reinstallato" : "verrà aggiornato alla versione " + Version) + ". I tuoi dati (report, sessioni, impostazioni) restano dove sono."
+                Text = update ? "BlackBox " + old + " è già installato: prima verrà disinstallato del tutto, poi verrà installata la versione " + Version + " da zero. I tuoi dati (report, sessioni, impostazioni) restano dove sono."
                               : "BlackBox verrà installato solo per il tuo utente. Non servono permessi di amministratore e non si collega a internet." });
             sp.Children.Add(new TextBlock { Text = "Cartella:  " + InstallDir, Foreground = Muted, FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12) });
             Func<string, bool, CheckBox> cb = (t, on) => { var c = new CheckBox { Content = t, IsChecked = on, Foreground = Txt, Margin = new Thickness(0, 3, 0, 3) }; sp.Children.Add(c); return c; };
@@ -125,8 +125,13 @@ namespace BlackBoxSetup
 
         static void Install(bool auto, bool menu, bool desk, Action<string> say)
         {
-            say("Chiudo BlackBox se è aperto...");
-            CloseRunning();
+            if (InstalledVersion() != null || File.Exists(ExeTarget) || AutoStartPath() != null)
+            {
+                // versione precedente (o copia portatile con avvio automatico): prima la disinstallo del tutto, poi installo da zero
+                say("Disinstallo la versione precedente...");
+                RemoveInstalled(InstallDir, true);
+            }
+            else { say("Chiudo BlackBox se è aperto..."); CloseRunning(); }
             say("Copio i file...");
             Directory.CreateDirectory(InstallDir);
             using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("BlackBox.exe"))
@@ -205,18 +210,25 @@ namespace BlackBoxSetup
                                     "Se hai installato OptiScaler in qualche gioco con BlackBox, rimuovilo prima da «Giochi & OptiScaler»: dopo resterà nei giochi.",
                                     "Disinstalla BlackBox", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (q != MessageBoxResult.Yes) return 0;
+            RemoveInstalled(dir, false);
+            if (!quiet) MessageBox.Show("BlackBox è stato disinstallato.", "BlackBox", MessageBoxButton.OK, MessageBoxImage.Information);
+            return 0;
+        }
+
+        // toglie un'installazione: programma chiuso, avvio automatico, collegamenti, voce in App, file del programma.
+        // I dati in Documenti\BlackBox non vengono mai toccati. anyAutoStart: toglie anche l'avvio automatico di una copia portatile.
+        static void RemoveInstalled(string dir, bool anyAutoStart)
+        {
             CloseRunning();
             Thread.Sleep(500);
             string run = AutoStartPath();
-            if (run != null && run.IndexOf(dir, StringComparison.OrdinalIgnoreCase) >= 0)
+            if (run != null && (anyAutoStart || run.IndexOf(dir, StringComparison.OrdinalIgnoreCase) >= 0))
                 using (var k = Registry.CurrentUser.OpenSubKey(RunKey, true)) k.DeleteValue(AppName, false);
             TryDelete(StartMenuLnk); TryDelete(DesktopLnk);
             try { Registry.CurrentUser.DeleteSubKeyTree(UninstKey, false); } catch { }
             // cancella solo i file del programma, nella sua cartella
-            foreach (var f in new[] { "BlackBox.exe", "Disinstalla.exe" }) TryDelete(Path.Combine(dir, f));
+            foreach (var f in new[] { "BlackBox.exe", "Disinstalla.exe", "BlackBox.exe.new" }) TryDelete(Path.Combine(dir, f));
             try { if (Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any()) Directory.Delete(dir); } catch { }
-            if (!quiet) MessageBox.Show("BlackBox è stato disinstallato.", "BlackBox", MessageBoxButton.OK, MessageBoxImage.Information);
-            return 0;
         }
     }
 }
