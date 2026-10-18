@@ -26,7 +26,8 @@ namespace BlackBox
         public DateTime LastThrottle = DateTime.MinValue;
         public bool LastThrottleThermal;
         public double ThermalThrottleSec;
-        public double BaseEff = double.NaN;   // FPS reali per watt nelle partite precedenti allo stesso gioco
+        public double BaseEff = double.NaN;   // FPS reali per watt nelle partite precedenti allo stesso gioco (solo quelle da 5 minuti in su)
+        public int BaseCount; public bool BaseSameConfig;
         // OptiScaler in questa partita
         public string OptiInstalled = "", OptiProxy = "", OptiStatus = "", OptiCrash = "";
         public DateTime OptiCheckAt = DateTime.MaxValue; public int OptiChecks;
@@ -195,9 +196,15 @@ namespace BlackBox
             try { c.Proc = Process.GetProcessById(c.Pid); } catch { }
             try { c.ExePath = Native.ProcessPath(c.Pid); } catch { }   // permesso minimo: niente lettura della memoria del gioco
             c.Samples.AddRange(candSamples);
-            var prev = SessionLog.Read(dir).Where(x => string.Equals(x.Game, c.Game, StringComparison.OrdinalIgnoreCase) && !double.IsNaN(x.Eff))
+            // solo partite vere (almeno 5 minuti): quelle di un minuto sono spesso solo menu, con pochi watt e FPS bloccati,
+            // e falserebbero il confronto (falso «-35%» visto il 18/10 con Wardogs)
+            var prev = SessionLog.Read(dir).Where(x => string.Equals(x.Game, c.Game, StringComparison.OrdinalIgnoreCase) && !double.IsNaN(x.Eff) && x.Num("durata_min") >= 5)
                                            .OrderByDescending(x => x.Start).Take(5).ToList();
-            if (prev.Count > 0) c.BaseEff = prev.Average(x => x.Eff);
+            if (prev.Count > 0)
+            {
+                c.BaseEff = prev.Average(x => x.Eff); c.BaseCount = prev.Count;
+                c.BaseSameConfig = prev.All(x => x.Config == c.Config);
+            }
             candSamples.Clear(); candPid = 0;
             loadClk.Clear(); typicalClk = double.NaN; thrRun = 0;
             current = c;
@@ -396,7 +403,10 @@ namespace BlackBox
             double vram = Max(all, x => x.VramMb) / 1024.0;
             double fps, fpsLow, fpsReal, fgShare;
             Fps.SessionStats(out fps, out fpsLow, out fpsReal, out fgShare);
-            double eff = !double.IsNaN(fpsReal) && pAvg > 20 ? fpsReal / pAvg : double.NaN;   // FPS reali per watt
+            // FPS reali per watt: solo i secondi in cui si gioca davvero (scheda video oltre il 60%), non menu e caricamenti
+            // (nei menu gli FPS sono spesso bloccati e i watt bassi: l'efficienza verrebbe falsata); almeno un minuto di dati
+            var effS = all.Where(x => x.Gpu3d > 60 && x.GpuPower > 20 && !double.IsNaN(x.FpsReal)).Select(x => x.FpsReal / x.GpuPower).ToList();
+            double eff = effS.Count >= 60 ? effS.Average() : double.NaN;
             bool fg = !double.IsNaN(fgShare) && fgShare > 0.2;
             try { Fps.Stop(); } catch { }
             try { using (var me = Process.GetCurrentProcess()) me.PriorityClass = ProcessPriorityClass.Normal; } catch { }
@@ -441,10 +451,13 @@ namespace BlackBox
             if (!double.IsNaN(eff))
             {
                 string cmp = "";
-                if (!double.IsNaN(c.BaseEff) && c.BaseEff > 0)
+                // confronto solo tra partite vere (questa e le precedenti da 5 minuti in su); sotto il 5% e' normale variazione
+                if (!double.IsNaN(c.BaseEff) && c.BaseEff > 0 && (c.End - c.Start).TotalMinutes >= 5)
                 {
                     double d = (eff / c.BaseEff - 1) * 100;
-                    cmp = "  (" + (d >= 0 ? "+" : "") + N0(d) + "% rispetto alle tue partite precedenti a " + c.Game + ")";
+                    string su = c.BaseCount == 1 ? "alla tua partita precedente" : "alle tue " + c.BaseCount + " partite precedenti";
+                    cmp = Math.Abs(d) < 5 ? "  (in linea con " + su.Replace("alla ", "la ").Replace("alle ", "le ") + ")"
+                                          : "  (" + (d >= 0 ? "+" : "") + N0(d) + "% rispetto " + su + (c.BaseSameConfig ? ", stessa configurazione: probabilmente scene diverse" : ", con un'altra configurazione") + ")";
                 }
                 Row(sb, "Efficienza", eff.ToString("0.00", CultureInfo.InvariantCulture) + " FPS reali per watt" + cmp);
                 sb.AppendLine("  (più è alta, meglio funziona l'undervolt: stessi FPS con meno watt. Confronta la stessa scena.)");

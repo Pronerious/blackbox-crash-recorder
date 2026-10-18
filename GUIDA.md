@@ -451,7 +451,10 @@ ok**, oppure cosa non va. Cliccala per l'elenco completo:
 - **efficienza in FPS per watt** (FPS reali divisi per i watt della scheda): è il
   numero migliore per confrontare due undervolt. Più è alto, meglio è. Confronta
   sempre la stessa scena dello stesso gioco. Il report dice di quanto sei sopra o
-  sotto le tue partite precedenti;
+  sotto le tue partite precedenti allo stesso gioco. Contano solo i secondi in cui giochi
+  davvero (non menu e caricamenti) e solo le partite di almeno 5 minuti: quelle brevi sono
+  spesso solo menu e falserebbero il confronto. Sotto il 5% di differenza il report dice
+  «in linea», perché è normale variazione;
 - fluidità (1% low), memoria video e RAM: avvisano solo se il gioco scatta davvero;
 - programmi e impostazioni utili: HWiNFO, PresentMon, Modalità gioco, HAGS.
 

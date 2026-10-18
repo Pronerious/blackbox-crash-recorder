@@ -78,7 +78,7 @@ sistema.
   niente conflitti con gli anti-cheat; il gioco resta in *Independent Flip*.
 - **Undervolt / overclock**: stabilità (crash del driver, crash del gioco, throttling
   da calore), **efficienza in FPS reali per watt** confrontata con le tue partite
-  precedenti, e avviso se **Adrenalin ha rimesso i valori di fabbrica** dopo un crash.
+  precedenti (solo i secondi di gioco vero e le partite da 5 minuti in su: niente falsi confronti con i menu), e avviso se **Adrenalin ha rimesso i valori di fabbrica** dopo un crash.
 - **Leggero**: in partita passa a priorità bassa, dirada i controlli, non mostra
   notifiche (le tiene per fine partita). Misurato: circa **0,15–0,3% della CPU** con
   l'overlay acceso.
@@ -167,7 +167,7 @@ sistema.
 
 Scarica dalla pagina **[Releases](../../releases)**:
 
-- **`BlackBox-Setup-1.2.7.exe`** (consigliato): installa BlackBox per il tuo utente
+- **`BlackBox-Setup-1.2.8.exe`** (consigliato): installa BlackBox per il tuo utente
   in `%LocalAppData%\Programs\BlackBox`, **senza amministratore**, con collegamento nel
   menu Start, avvio automatico e disinstallazione da *Impostazioni → App*. Se BlackBox
   è già installato, prima lo disinstalla del tutto e poi installa la versione nuova; i tuoi

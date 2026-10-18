@@ -3,6 +3,13 @@
 I file di ogni versione (installer, exe portatile, guida) sono nella pagina
 [Releases](https://github.com/Pronerious/blackbox-crash-recorder/releases).
 
+## 1.2.8 — 18/10/2026
+- **Niente più falsi confronti di efficienza.** Le partite brevi (meno di 5 minuti, spesso solo menu con FPS bloccati e pochi watt) non contano più come base di confronto. Prima una partita normale di 2 ore poteva risultare «-35%» senza motivo.
+- L'efficienza (FPS per watt) conta solo i secondi in cui si gioca davvero, non menu e caricamenti.
+- Nel report: «in linea» se la differenza è sotto il 5%; altrimenti dice se la configurazione era la stessa (quindi scene diverse) o un'altra.
+- Il «prima e dopo» di OptiScaler ignora le partite brevi; il valore dal vivo nel Controllo stato avvisa che cambia con la scena.
+- Finestra principale: la scritta del test A/B non è più tagliata («2 ore senza spegnimenti» invece di «0.1 giorni»); riquadri in alto più bassi, così sotto c'è più spazio; i pulsanti vanno a capo invece di coprire il titolo; la finestra non si stringe più sotto la misura in cui tutto è leggibile (sugli schermi piccoli si apre a tutto schermo).
+
 ## 1.2.7 — 18/10/2026
 - **Nuova finestra «Partite»** (pulsante *Partite* o tasto destro sull'icona → *Partite e confronti*):
   - **grafici di ogni partita**: FPS (e FPS reali con la generazione di fotogrammi), temperature hotspot/edge/CPU, watt e clock della scheda video;

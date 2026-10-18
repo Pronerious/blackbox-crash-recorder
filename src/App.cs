@@ -24,9 +24,9 @@ using SD = System.Drawing;
 
 [assembly: AssemblyTitle("BlackBox")]
 [assembly: AssemblyProduct("BlackBox")]
-[assembly: AssemblyVersion("1.2.7.0")]
-[assembly: AssemblyFileVersion("1.2.7.0")]
-[assembly: AssemblyInformationalVersion("1.2.7")]
+[assembly: AssemblyVersion("1.2.8.0")]
+[assembly: AssemblyFileVersion("1.2.8.0")]
+[assembly: AssemblyInformationalVersion("1.2.8")]
 [assembly: AssemblyDescription("BlackBox - la scatola nera del PC, fatta per giocare")]
 
 namespace BlackBox
@@ -115,6 +115,14 @@ namespace BlackBox
 
             using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("MainWindow.xaml"))
                 win = (Window)XamlReader.Load(s);
+            // schermi piccoli: la misura minima non puo' superare lo schermo (in quel caso la finestra si apre a tutto schermo)
+            var wa = SystemParameters.WorkArea;
+            if (win.MinWidth > wa.Width || win.MinHeight > wa.Height)
+            {
+                win.MinWidth = Math.Min(win.MinWidth, wa.Width); win.MinHeight = Math.Min(win.MinHeight, wa.Height);
+                win.WindowState = WindowState.Maximized;
+            }
+            win.Width = Math.Min(win.Width, wa.Width); win.Height = Math.Min(win.Height, wa.Height);
             try
             {
                 using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("app.ico"))
@@ -133,7 +141,8 @@ namespace BlackBox
 
             col = new Collector(logDir);
             col.Start();
-            F<TextBlock>("SubTitle").Text = "v" + Version + "  •  Registrazione su disco ogni secondo  •  100% locale, internet solo per i download che avvii tu  •  " + logDir;
+            F<TextBlock>("SubTitle").Text = "v" + Version + "  •  registra ogni secondo  •  tutto in locale";
+            F<TextBlock>("SubTitle").ToolTip = "Registrazione su disco ogni secondo. 100% locale: internet solo per i download che avvii tu.\nDati in: " + logDir;
 
             if (snapshot == null) overlay = new Overlay(col);
             LoadPastEvents();
@@ -301,7 +310,7 @@ namespace BlackBox
             var u = new TextBlock { Text = " " + unit, FontSize = 14, Foreground = Muted, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(2, 0, 0, 6) };
             vp.Children.Add(v); vp.Children.Add(u);
             var sub = new TextBlock { FontSize = 12, Foreground = Muted, TextTrimming = TextTrimming.CharacterEllipsis };
-            var cv = new Canvas { Height = 46, Margin = new Thickness(0, 8, 0, 0), ClipToBounds = true };
+            var cv = new Canvas { Height = 30, Margin = new Thickness(0, 6, 0, 0), ClipToBounds = true };   // basso: lascia spazio ai riquadri sotto
             var c = (Color)ColorConverter.ConvertFromString(color);
             var fill = new Polygon { Fill = new LinearGradientBrush(Color.FromArgb(90, c.R, c.G, c.B), Color.FromArgb(0, c.R, c.G, c.B), 90) };
             var line = new Polyline { StrokeThickness = 1.8, StrokeLineJoin = PenLineJoin.Round, Stroke = B(color) };
@@ -406,14 +415,16 @@ namespace BlackBox
             var box = F<TextBox>("CfgBox");
             if (!box.IsKeyboardFocused) box.Text = cfg;
             int crashes = Analyzer.History(365, logDir).Count(h => h.BootTime >= since);
-            info.Text = "Attiva dal " + since.ToString("dd/MM/yyyy HH:mm") + ":  " + cfg;
+            info.Text = "Configurazione attiva dal " + since.ToString("dd/MM/yyyy HH:mm");   // il testo e' gia' nella casella sopra
             if (crashes == 0)
             {
                 // giorni puliti necessari: almeno 7, o il doppio dell'intervallo medio tra gli spegnimenti di questo PC
                 double d = (DateTime.Now - since).TotalDays;
                 double mean = Analyzer.MeanCrashInterval(logDir);
                 double need = double.IsNaN(mean) ? 7 : Math.Max(7, Math.Ceiling(mean * 2));
-                days.Text = d.ToString("N1") + " giorni senza spegnimenti";
+                double hrs = (DateTime.Now - since).TotalHours;
+                days.Text = (hrs < 1 ? "Meno di un'ora" : hrs < 24 ? Math.Floor(hrs).ToString("0") + (Math.Floor(hrs) == 1 ? " ora" : " ore")
+                            : d < 2 ? "1 giorno" : Math.Floor(d).ToString("0") + " giorni") + " senza spegnimenti";
                 days.Foreground = d >= need ? Green : Blue;
                 lbl.Text = d >= need
                     ? "Stabile da " + d.ToString("N0") + " giorni: questa modifica sembra aver risolto."

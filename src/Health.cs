@@ -130,7 +130,8 @@ namespace BlackBox
                     if (c != null && !double.IsNaN(c.BaseEff) && c.BaseEff > 0)
                     {
                         double d = (eff / c.BaseEff - 1) * 100;
-                        cmp = " (" + (d >= 0 ? "+" : "") + N(d) + "% rispetto alle tue partite precedenti)";
+                        cmp = Math.Abs(d) < 5 ? " (in linea con le tue partite precedenti)"
+                            : " (" + (d >= 0 ? "+" : "") + N(d) + "% rispetto alle tue partite precedenti; è la media degli ultimi 30 secondi, quindi cambia con la scena)";
                     }
                     add(-1, N(eff, "0.00") + " FPS/W", "Efficienza: " + N(eff, "0.00") + " FPS reali per watt" + cmp + ". Più è alta, meglio funziona l'undervolt.");
                 }

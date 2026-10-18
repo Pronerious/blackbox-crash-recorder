@@ -237,8 +237,8 @@ namespace BlackBox
         static string Compare(GameInfo g)
         {
             string proc = Path.GetFileNameWithoutExtension(g.Exe);
-            var rows = SessionLog.Read(BlackBoxDir()).Where(r => string.Equals(r.Game, proc, StringComparison.OrdinalIgnoreCase) && !double.IsNaN(r.Fps)).ToList();
-            if (rows.Count == 0) return "Confronto prima/dopo: ancora nessuna partita con FPS registrati.";
+            var rows = SessionLog.Read(BlackBoxDir()).Where(r => string.Equals(r.Game, proc, StringComparison.OrdinalIgnoreCase) && !double.IsNaN(r.Fps) && r.Num("durata_min") >= 5).ToList();   // le partite brevi (menu) falserebbero le medie
+            if (rows.Count == 0) return "Confronto prima/dopo: ancora nessuna partita di almeno 5 minuti con FPS registrati.";
             Func<List<SessionRow>, string> d = l => l.Count == 0 ? "nessuna partita" :
                 l.Average(x => x.Fps).ToString("0") + " FPS, 1% low " + l.Where(x => !double.IsNaN(x.Low)).Select(x => x.Low).DefaultIfEmpty(double.NaN).Average().ToString("0") +
                 ", " + l.Where(x => !double.IsNaN(x.Power)).Select(x => x.Power).DefaultIfEmpty(double.NaN).Average().ToString("0") + " W (" + l.Count + (l.Count == 1 ? " partita)" : " partite)");
